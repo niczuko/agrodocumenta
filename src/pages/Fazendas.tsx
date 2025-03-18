@@ -404,6 +404,58 @@ const FazendaDetailView = ({
   onClose: () => void; 
 }) => {
   const [activeTab, setActiveTab] = useState('info');
+  const [talhoes, setTalhoes] = useState<any[]>([]);
+  const [maquinarios, setMaquinarios] = useState<any[]>([]);
+  const [trabalhadores, setTrabalhadores] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<{[key: string]: boolean}>({
+    talhoes: false,
+    maquinarios: false,
+    trabalhadores: false
+  });
+  
+  useEffect(() => {
+    if (!fazenda) return;
+    
+    const fetchRelatedData = async () => {
+      // Fetch talhoes
+      setIsLoading(prev => ({ ...prev, talhoes: true }));
+      const { data: talhoesData, error: talhoesError } = await supabase
+        .from('talhoes')
+        .select('*')
+        .eq('fazenda_id', fazenda.id);
+      
+      if (!talhoesError && talhoesData) {
+        setTalhoes(talhoesData);
+      }
+      setIsLoading(prev => ({ ...prev, talhoes: false }));
+      
+      // Fetch maquinarios
+      setIsLoading(prev => ({ ...prev, maquinarios: true }));
+      const { data: maquinariosData, error: maquinariosError } = await supabase
+        .from('maquinarios')
+        .select('*')
+        .eq('fazenda_id', fazenda.id);
+      
+      if (!maquinariosError && maquinariosData) {
+        setMaquinarios(maquinariosData);
+      }
+      setIsLoading(prev => ({ ...prev, maquinarios: false }));
+      
+      // Fetch trabalhadores
+      setIsLoading(prev => ({ ...prev, trabalhadores: true }));
+      const { data: trabalhadoresData, error: trabalhadoresError } = await supabase
+        .from('trabalhadores')
+        .select('*')
+        .eq('fazenda_id', fazenda.id);
+      
+      if (!trabalhadoresError && trabalhadoresData) {
+        setTrabalhadores(trabalhadoresData);
+      }
+      setIsLoading(prev => ({ ...prev, trabalhadores: false }));
+    };
+    
+    fetchRelatedData();
+  }, [fazenda]);
   
   if (!fazenda) return null;
   
@@ -425,24 +477,26 @@ const FazendaDetailView = ({
           </div>
           
           <Tabs defaultValue="info" className="p-6" onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="info" className="flex items-center gap-2">
-                <i className="fa-solid fa-info-circle"></i>
-                <span>Informações</span>
-              </TabsTrigger>
-              <TabsTrigger value="talhoes" className="flex items-center gap-2">
-                <i className="fa-solid fa-layer-group"></i>
-                <span>Talhões</span>
-              </TabsTrigger>
-              <TabsTrigger value="maquinarios" className="flex items-center gap-2">
-                <i className="fa-solid fa-tractor"></i>
-                <span>Maquinários</span>
-              </TabsTrigger>
-              <TabsTrigger value="trabalhadores" className="flex items-center gap-2">
-                <i className="fa-solid fa-users"></i>
-                <span>Trabalhadores</span>
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto pb-2">
+              <TabsList className="mb-6 w-full sm:w-auto flex">
+                <TabsTrigger value="info" className="flex-1 sm:flex-initial flex items-center gap-2">
+                  <i className="fa-solid fa-info-circle"></i>
+                  <span className="truncate">Informações</span>
+                </TabsTrigger>
+                <TabsTrigger value="talhoes" className="flex-1 sm:flex-initial flex items-center gap-2">
+                  <i className="fa-solid fa-layer-group"></i>
+                  <span className="truncate">Talhões</span>
+                </TabsTrigger>
+                <TabsTrigger value="maquinarios" className="flex-1 sm:flex-initial flex items-center gap-2">
+                  <i className="fa-solid fa-tractor"></i>
+                  <span className="truncate">Maquinários</span>
+                </TabsTrigger>
+                <TabsTrigger value="trabalhadores" className="flex-1 sm:flex-initial flex items-center gap-2">
+                  <i className="fa-solid fa-users"></i>
+                  <span className="truncate">Trabalhadores</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
             
             <TabsContent value="info">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -485,16 +539,16 @@ const FazendaDetailView = ({
                     
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div className="text-center p-4 bg-mono-50 rounded-lg">
-                        <div className="text-2xl font-bold text-primary mb-1">{fazenda.stats?.talhoes || 0}</div>
-                        <div className="text-mono-600">Talhões</div>
+                        <div className="text-2xl font-bold text-primary mb-1">{talhoes.length || 0}</div>
+                        <div className="text-mono-600 text-sm">Talhões</div>
                       </div>
                       <div className="text-center p-4 bg-mono-50 rounded-lg">
-                        <div className="text-2xl font-bold text-primary mb-1">{fazenda.stats?.maquinarios || 0}</div>
-                        <div className="text-mono-600">Maquinários</div>
+                        <div className="text-2xl font-bold text-primary mb-1">{maquinarios.length || 0}</div>
+                        <div className="text-mono-600 text-sm">Maquinários</div>
                       </div>
                       <div className="text-center p-4 bg-mono-50 rounded-lg">
-                        <div className="text-2xl font-bold text-primary mb-1">{fazenda.stats?.trabalhadores || 0}</div>
-                        <div className="text-mono-600">Trabalhadores</div>
+                        <div className="text-2xl font-bold text-primary mb-1">{trabalhadores.length || 0}</div>
+                        <div className="text-mono-600 text-sm">Trabalhadores</div>
                       </div>
                     </div>
                     
@@ -520,7 +574,11 @@ const FazendaDetailView = ({
                     </Button>
                   </div>
                   
-                  {fazenda.stats?.talhoes === 0 ? (
+                  {isLoading.talhoes ? (
+                    <div className="flex justify-center py-12">
+                      <i className="fa-solid fa-circle-notch fa-spin text-primary text-2xl"></i>
+                    </div>
+                  ) : talhoes.length === 0 ? (
                     <div className="text-center py-12 text-mono-500">
                       <i className="fa-solid fa-layer-group text-4xl mb-2"></i>
                       <p className="text-lg mb-1">Nenhum talhão cadastrado</p>
@@ -528,7 +586,15 @@ const FazendaDetailView = ({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Aqui viriam os cards de talhões */}
+                      {talhoes.map((talhao) => (
+                        <div key={talhao.id} className="border rounded-lg p-4">
+                          <div className="font-semibold mb-2">{talhao.nome || 'Talhão sem nome'}</div>
+                          <div className="text-sm text-mono-500">
+                            <div>Área: {talhao.area ? `${talhao.area} ha` : 'N/A'}</div>
+                            <div>Cultura: {talhao.cultura || 'N/A'}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
@@ -546,7 +612,11 @@ const FazendaDetailView = ({
                     </Button>
                   </div>
                   
-                  {fazenda.stats?.maquinarios === 0 ? (
+                  {isLoading.maquinarios ? (
+                    <div className="flex justify-center py-12">
+                      <i className="fa-solid fa-circle-notch fa-spin text-primary text-2xl"></i>
+                    </div>
+                  ) : maquinarios.length === 0 ? (
                     <div className="text-center py-12 text-mono-500">
                       <i className="fa-solid fa-tractor text-4xl mb-2"></i>
                       <p className="text-lg mb-1">Nenhum maquinário cadastrado</p>
@@ -554,7 +624,15 @@ const FazendaDetailView = ({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Aqui viriam os cards de maquinários */}
+                      {maquinarios.map((maquinario) => (
+                        <div key={maquinario.id} className="border rounded-lg p-4">
+                          <div className="font-semibold mb-2">{maquinario.nome || 'Maquinário sem nome'}</div>
+                          <div className="text-sm text-mono-500">
+                            <div>Modelo: {maquinario.modelo || 'N/A'}</div>
+                            <div>Ano: {maquinario.ano || 'N/A'}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
@@ -572,7 +650,11 @@ const FazendaDetailView = ({
                     </Button>
                   </div>
                   
-                  {fazenda.stats?.trabalhadores === 0 ? (
+                  {isLoading.trabalhadores ? (
+                    <div className="flex justify-center py-12">
+                      <i className="fa-solid fa-circle-notch fa-spin text-primary text-2xl"></i>
+                    </div>
+                  ) : trabalhadores.length === 0 ? (
                     <div className="text-center py-12 text-mono-500">
                       <i className="fa-solid fa-users text-4xl mb-2"></i>
                       <p className="text-lg mb-1">Nenhum trabalhador cadastrado</p>
@@ -580,7 +662,15 @@ const FazendaDetailView = ({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Aqui viriam os cards de trabalhadores */}
+                      {trabalhadores.map((trabalhador) => (
+                        <div key={trabalhador.id} className="border rounded-lg p-4">
+                          <div className="font-semibold mb-2">{trabalhador.nome || 'Trabalhador sem nome'}</div>
+                          <div className="text-sm text-mono-500">
+                            <div>Função: {trabalhador.funcao || 'N/A'}</div>
+                            <div>Contato: {trabalhador.contato || 'N/A'}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
@@ -914,3 +1004,4 @@ const Fazendas = () => {
 };
 
 export default Fazendas;
+

@@ -79,7 +79,7 @@ export function Navbar() {
     await signOut();
   };
 
-  // Navbar para dispositivos móveis
+  // Navbar para dispositivos móveis - com fundo claro
   const mobileNav = (
     <>
       <button 
@@ -95,14 +95,14 @@ export function Navbar() {
           onClick={() => setIsOpen(false)}
         >
           <div 
-            className="fixed top-0 left-0 h-full w-64 glass-dark p-4 animate-slide-in"
+            className="fixed top-0 left-0 h-full w-64 bg-white/95 backdrop-blur-sm border-r border-mono-200 p-4 animate-slide-in shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col h-full">
               <div className="mb-6 mt-10">
                 <Link to="/dashboard" className="flex items-center gap-2">
                   <i className="fa-solid fa-seedling text-primary text-xl"></i>
-                  <h1 className="text-xl font-semibold">AgroTerra</h1>
+                  <h1 className="text-xl font-semibold text-mono-900">AgroTerra</h1>
                 </Link>
               </div>
               
@@ -123,17 +123,17 @@ export function Navbar() {
               
               <div className="mt-auto">
                 <ThemeSelector />
-                <div className="mt-4 border-t border-mono-800 pt-4">
+                <div className="mt-4 border-t border-mono-200 pt-4">
                   <Link
                     to="/perfil"
-                    className="flex items-center gap-2 px-4 py-2 hover:bg-mono-800/50 rounded-lg"
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-mono-100 rounded-lg text-mono-800"
                   >
                     <i className="fa-solid fa-user-circle"></i>
                     <span>Perfil</span>
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-2 px-4 py-2 text-red-400 w-full text-left hover:bg-mono-800/50 rounded-lg mt-2"
+                    className="flex items-center gap-2 px-4 py-2 text-red-600 w-full text-left hover:bg-mono-100 rounded-lg mt-2"
                   >
                     <i className="fa-solid fa-sign-out-alt"></i>
                     <span>Sair</span>
