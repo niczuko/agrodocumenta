@@ -1,34 +1,32 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Glass } from '@/components/ui/Glass';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/sonner';
 
-const Login = () => {
+const Cadastro = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { accentColor } = useTheme();
-  const { signIn, user } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    // Se o usuário já estiver autenticado, redireciona para o dashboard
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
+  const { signUp } = useAuth();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     
-    const { error } = await signIn(email, password);
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      setIsLoading(false);
+      return;
+    }
+    
+    const { error } = await signUp(email, password);
     
     setIsLoading(false);
     if (error) {
@@ -59,7 +57,7 @@ const Login = () => {
           hover={true} 
           className="p-8"
         >
-          <h2 className="text-xl font-semibold mb-6 text-mono-900">Entrar</h2>
+          <h2 className="text-xl font-semibold mb-6 text-mono-900">Criar Conta</h2>
           
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
@@ -83,15 +81,10 @@ const Login = () => {
               />
             </div>
             
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-sm font-medium text-mono-700">
-                  Senha
-                </label>
-                <a href="#" className="text-sm text-primary hover:underline">
-                  Esqueceu a senha?
-                </a>
-              </div>
+            <div className="mb-4">
+              <label htmlFor="password" className="block text-sm font-medium text-mono-700 mb-1">
+                Senha
+              </label>
               <input
                 id="password"
                 type="password"
@@ -100,6 +93,21 @@ const Login = () => {
                 className="input-field"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            
+            <div className="mb-6">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-mono-700 mb-1">
+                Confirmar Senha
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                required
+                className="input-field"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
             
@@ -114,18 +122,18 @@ const Login = () => {
               {isLoading ? (
                 <>
                   <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>
-                  Entrando...
+                  Criando Conta...
                 </>
               ) : (
-                "Entrar"
+                "Criar Conta"
               )}
             </button>
           </form>
           
           <div className="mt-6 text-center text-sm text-mono-600">
-            Não tem uma conta?{" "}
-            <Link to="/cadastro" className="text-primary font-medium hover:underline">
-              Cadastre-se
+            Já tem uma conta?{" "}
+            <Link to="/login" className="text-primary font-medium hover:underline">
+              Entrar
             </Link>
           </div>
         </Glass>
@@ -138,4 +146,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Cadastro;

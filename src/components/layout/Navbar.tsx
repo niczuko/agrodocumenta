@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Glass } from '@/components/ui/Glass';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 type NavLinkProps = {
   to: string;
@@ -62,6 +63,7 @@ const ThemeSelector = () => {
 export function Navbar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { signOut } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -72,6 +74,10 @@ export function Navbar() {
     { to: "/maquinarios", label: "Maquinários", icon: "fa-solid fa-tractor" },
     { to: "/trabalhadores", label: "Trabalhadores", icon: "fa-solid fa-users" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   // Navbar para dispositivos móveis
   const mobileNav = (
@@ -126,6 +132,7 @@ export function Navbar() {
                     <span>Perfil</span>
                   </Link>
                   <button
+                    onClick={handleSignOut}
                     className="flex items-center gap-2 px-4 py-2 text-red-400 w-full text-left hover:bg-mono-800/50 rounded-lg mt-2"
                   >
                     <i className="fa-solid fa-sign-out-alt"></i>
@@ -181,6 +188,7 @@ export function Navbar() {
               <span>Perfil</span>
             </Link>
             <button
+              onClick={handleSignOut}
               className="flex items-center gap-2 px-4 py-2 text-red-600 w-full text-left hover:bg-mono-100 rounded-lg mt-2"
             >
               <i className="fa-solid fa-sign-out-alt"></i>
