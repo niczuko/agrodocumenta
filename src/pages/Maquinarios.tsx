@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
@@ -61,18 +60,18 @@ const MaquinarioCard = ({
   }
   
   return (
-    <Glass hover={true} className="p-6">
-      <div className="flex justify-between">
+    <Glass hover={true} className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <i className={`${tipoIcone} text-primary text-xl`}></i>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <i className={`${tipoIcone} text-primary text-lg sm:text-xl`}></i>
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-mono-900">{maquinario.nome}</h3>
-            <p className="text-mono-600">{maquinario.tipo}</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-mono-900 line-clamp-1">{maquinario.nome}</h3>
+            <p className="text-mono-600 text-sm sm:text-base">{maquinario.tipo}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-4 sm:mb-0">
           <button 
             onClick={() => onView(maquinario.id)}
             className="p-2 text-mono-600 hover:text-primary transition-colors"
@@ -97,37 +96,37 @@ const MaquinarioCard = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
         <div>
-          <div className="text-sm text-mono-500">Modelo</div>
-          <div className="font-medium">{maquinario.modelo || 'Não informado'}</div>
+          <div className="text-xs sm:text-sm text-mono-500">Modelo</div>
+          <div className="font-medium text-sm sm:text-base truncate">{maquinario.modelo || 'Não informado'}</div>
         </div>
         <div>
-          <div className="text-sm text-mono-500">Fabricante</div>
-          <div className="font-medium">{maquinario.fabricante || 'Não informado'}</div>
+          <div className="text-xs sm:text-sm text-mono-500">Fabricante</div>
+          <div className="font-medium text-sm sm:text-base truncate">{maquinario.fabricante || 'Não informado'}</div>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
         <div>
-          <div className="text-sm text-mono-500">Ano</div>
-          <div className="font-medium">{maquinario.ano || 'Não informado'}</div>
+          <div className="text-xs sm:text-sm text-mono-500">Ano</div>
+          <div className="font-medium text-sm sm:text-base">{maquinario.ano || 'Não informado'}</div>
         </div>
         <div>
-          <div className="text-sm text-mono-500">Nº de Série</div>
-          <div className="font-medium truncate">{maquinario.numero_serie || 'Não informado'}</div>
+          <div className="text-xs sm:text-sm text-mono-500">Nº de Série</div>
+          <div className="font-medium text-sm sm:text-base truncate">{maquinario.numero_serie || 'Não informado'}</div>
         </div>
       </div>
       
       <div className="mb-4">
-        <div className="text-sm text-mono-500">Fazenda</div>
-        <div className="font-medium">{fazendaNome}</div>
+        <div className="text-xs sm:text-sm text-mono-500">Fazenda</div>
+        <div className="font-medium text-sm sm:text-base truncate">{fazendaNome}</div>
       </div>
       
-      <div className="flex justify-between items-center mt-2 pt-4 border-t border-mono-200">
-        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-2 pt-4 border-t border-mono-200">
+        <div className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium mb-2 sm:mb-0 ${
           maquinario.status === 'Ativo' 
-            ? 'bg-green-100 text-green-700' 
+            ? 'bg-primary/10 text-primary' 
             : maquinario.status === 'Manutenção' 
               ? 'bg-yellow-100 text-yellow-700'
               : 'bg-red-100 text-red-700'
@@ -136,12 +135,12 @@ const MaquinarioCard = ({
         </div>
         
         {diasAteManutencao !== null && (
-          <div className={`text-sm font-medium ${
+          <div className={`text-xs sm:text-sm font-medium ${
             diasAteManutencao < 0 
               ? 'text-red-600' 
               : diasAteManutencao <= 30 
                 ? 'text-yellow-600'
-                : 'text-green-600'
+                : 'text-primary'
           }`}>
             {diasAteManutencao < 0 
               ? `Manutenção atrasada ${Math.abs(diasAteManutencao)} dias` 
@@ -478,7 +477,7 @@ const MaquinarioFormModal = ({
         const { data, error } = await supabase
           .from('maquinarios')
           .insert(maquinarioParams)
-          .select('id')
+          .select('id, nome, tipo, modelo, ano, fabricante, numero_serie, status, ultima_manutencao, proxima_manutencao, notas, created_at, fazenda_id')
           .single();
           
         if (error) {
@@ -493,6 +492,9 @@ const MaquinarioFormModal = ({
           entidade_tipo: 'maquinario',
           entidade_id: data.id
         });
+        
+        // Adiciona o novo maquinário à lista
+        setMaquinarios(prev => [data as Maquinario, ...prev]);
         
         toast.success('Maquinário adicionado com sucesso!');
       }
@@ -847,6 +849,7 @@ const Maquinarios = () => {
         });
       }
       
+      // Atualizar a lista de maquinários sem recarregar
       setMaquinarios(prev => prev.filter(m => m.id !== deletingMaquinario));
       toast.success('Maquinário excluído com sucesso!');
     } catch (error: any) {

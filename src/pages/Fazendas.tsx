@@ -1,103 +1,54 @@
+
+// Fix for Fazendas.tsx to properly calculate counts without using .group()
+// This replacement approach calculates counts manually after fetching all related records
+
+// Import required components and utilities
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { Glass } from '@/components/ui/Glass';
 import { PageTitle } from '@/components/ui/PageTitle';
+import { Glass } from '@/components/ui/Glass';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
+// Types for data
 type Fazenda = {
   id: string;
   nome: string;
-  localizacao: string;
+  endereco: string;
   area_total: number;
-  descricao: string;
-  data_aquisicao: string | null;
-  talhoes_count?: number;
-  maquinarios_count?: number;
-  trabalhadores_count?: number;
+  cidade: string;
+  estado: string;
+  created_at: string;
+  user_id: string;
+  stats?: {
+    talhoes: number;
+    trabalhadores: number;
+    maquinarios: number;
+  }
 };
 
-const FazendaCard = ({ 
-  fazenda, 
-  onEdit,
-  onDelete,
-  onView
-}: { 
-  fazenda: Fazenda; 
-  onEdit: (id: string) => void; 
-  onDelete: (id: string) => void;
-  onView: (id: string) => void;
-}) => {
-  return (
-    <Glass hover={true} className="p-6">
-      <div className="flex justify-between">
-        <h3 className="text-xl font-semibold text-mono-900">{fazenda.nome}</h3>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => onEdit(fazenda.id)}
-            className="p-2 text-mono-600 hover:text-primary transition-colors"
-            title="Editar"
-          >
-            <i className="fa-solid fa-pen-to-square"></i>
-          </button>
-          <button 
-            onClick={() => onView(fazenda.id)}
-            className="p-2 text-mono-600 hover:text-primary transition-colors"
-            title="Ver detalhes"
-          >
-            <i className="fa-solid fa-arrow-up-right-from-square"></i>
-          </button>
-          <button 
-            onClick={() => onDelete(fazenda.id)}
-            className="p-2 text-mono-600 hover:text-red-500 transition-colors"
-            title="Excluir"
-          >
-            <i className="fa-solid fa-trash"></i>
-          </button>
-        </div>
-      </div>
-      
-      <p className="text-mono-600 mt-1">
-        <i className="fa-solid fa-location-dot mr-1"></i> {fazenda.localizacao || 'Localização não informada'}
-      </p>
-      
-      <div className="mt-4 flex items-center text-mono-700">
-        <i className="fa-solid fa-ruler mr-1"></i>
-        <span>{fazenda.area_total || 0} hectares</span>
-      </div>
-      
-      <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-mono-200">
-        <div className="text-center">
-          <div className="text-mono-900 font-semibold">{fazenda.talhoes_count || 0}</div>
-          <div className="text-mono-600 text-sm">Talhões</div>
-        </div>
-        <div className="text-center">
-          <div className="text-mono-900 font-semibold">{fazenda.maquinarios_count || 0}</div>
-          <div className="text-mono-600 text-sm">Maquinários</div>
-        </div>
-        <div className="text-center">
-          <div className="text-mono-900 font-semibold">{fazenda.trabalhadores_count || 0}</div>
-          <div className="text-mono-600 text-sm">Trabalhadores</div>
-        </div>
-      </div>
-    </Glass>
-  );
-};
-
-const FazendaFormModal = ({ 
+// Fazenda Form component
+const FazendaForm = ({ 
   isOpen, 
   onClose, 
   isEditing = false, 
-  fazendaData = { id: '', nome: '', localizacao: '', area_total: '', descricao: '', data_aquisicao: '' } 
+  fazendaData = { id: '', nome: '', endereco: '', area_total: '', cidade: '', estado: '' },
+  onAddFazenda
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
   isEditing?: boolean; 
-  fazendaData?: { id: string; nome: string; localizacao: string; area_total: string; descricao: string; data_aquisicao: string; };
+  fazendaData?: { id: string; nome: string; endereco: string; area_total: string; cidade: string; estado: string; };
+  onAddFazenda: (fazenda: Fazenda) => void;
 }) => {
   const [formData, setFormData] = useState(fazendaData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { user } = useAuth();
   
   useEffect(() => {
@@ -106,7 +57,7 @@ const FazendaFormModal = ({
   
   if (!isOpen) return null;
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -120,23 +71,22 @@ const FazendaFormModal = ({
       
       const fazendaParams = {
         nome: formData.nome,
-        localizacao: formData.localizacao || null,
-        area_total: formData.area_total ? parseFloat(formData.area_total) : null,
-        descricao: formData.descricao || null,
-        data_aquisicao: formData.data_aquisicao || null,
+        endereco: formData.endereco,
+        area_total: formData.area_total ? parseFloat(formData.area_total) : 0,
+        cidade: formData.cidade,
+        estado: formData.estado,
         user_id: user.id
       };
       
       if (isEditing) {
         const { error } = await supabase
           .from('fazendas')
-          .update({
-            ...fazendaParams,
-            updated_at: new Date().toISOString()
-          })
+          .update(fazendaParams)
           .eq('id', formData.id);
           
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
         
         // Register activity
         await supabase.from('atividades').insert({
@@ -152,10 +102,25 @@ const FazendaFormModal = ({
         const { data, error } = await supabase
           .from('fazendas')
           .insert(fazendaParams)
-          .select('id')
+          .select('*')
           .single();
           
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
+        
+        // Add stats property for the UI
+        const newFazenda = {
+          ...data,
+          stats: {
+            talhoes: 0,
+            trabalhadores: 0,
+            maquinarios: 0
+          }
+        };
+        
+        // Add the new farm to the state
+        onAddFazenda(newFazenda);
         
         // Register activity
         await supabase.from('atividades').insert({
@@ -180,7 +145,7 @@ const FazendaFormModal = ({
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-mono-900/50 backdrop-blur-sm">
-      <div className="animate-scale-in w-full max-w-lg">
+      <div className="animate-scale-in w-full max-w-2xl">
         <Glass intensity="high" className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">
@@ -208,70 +173,99 @@ const FazendaFormModal = ({
                   className="input-field"
                   value={formData.nome}
                   onChange={handleChange}
-                  placeholder="Ex: Fazenda Esperança"
+                  placeholder="Ex: Fazenda São João"
                 />
               </div>
               
               <div>
-                <label htmlFor="localizacao" className="block text-sm font-medium text-mono-700 mb-1">
-                  Localização
+                <label htmlFor="area_total" className="block text-sm font-medium text-mono-700 mb-1">
+                  Área Total (ha)
                 </label>
                 <input
-                  id="localizacao"
-                  name="localizacao"
-                  type="text"
+                  id="area_total"
+                  name="area_total"
+                  type="number"
                   className="input-field"
-                  value={formData.localizacao}
+                  value={formData.area_total}
                   onChange={handleChange}
-                  placeholder="Ex: São Paulo, SP"
+                  placeholder="Ex: 500"
+                  step="0.01"
                 />
               </div>
             </div>
             
             <div className="mb-4">
-              <label htmlFor="area_total" className="block text-sm font-medium text-mono-700 mb-1">
-                Área Total (hectares)
+              <label htmlFor="endereco" className="block text-sm font-medium text-mono-700 mb-1">
+                Endereço
               </label>
               <input
-                id="area_total"
-                name="area_total"
-                type="number"
-                min="0"
-                step="0.01"
+                id="endereco"
+                name="endereco"
+                type="text"
                 className="input-field"
-                value={formData.area_total}
+                value={formData.endereco}
                 onChange={handleChange}
-                placeholder="Ex: 50.5"
+                placeholder="Ex: Estrada Municipal, Km 5"
               />
             </div>
             
-            <div className="mb-4">
-              <label htmlFor="data_aquisicao" className="block text-sm font-medium text-mono-700 mb-1">
-                Data de Aquisição
-              </label>
-              <input
-                id="data_aquisicao"
-                name="data_aquisicao"
-                type="date"
-                className="input-field"
-                value={formData.data_aquisicao}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="mb-6">
-              <label htmlFor="descricao" className="block text-sm font-medium text-mono-700 mb-1">
-                Descrição
-              </label>
-              <textarea
-                id="descricao"
-                name="descricao"
-                rows={3}
-                className="input-field"
-                value={formData.descricao}
-                onChange={handleChange}
-                placeholder="Informações adicionais sobre a fazenda"
-              ></textarea>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label htmlFor="cidade" className="block text-sm font-medium text-mono-700 mb-1">
+                  Cidade
+                </label>
+                <input
+                  id="cidade"
+                  name="cidade"
+                  type="text"
+                  className="input-field"
+                  value={formData.cidade}
+                  onChange={handleChange}
+                  placeholder="Ex: Ribeirão Preto"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="estado" className="block text-sm font-medium text-mono-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  id="estado"
+                  name="estado"
+                  className="input-field"
+                  value={formData.estado}
+                  onChange={handleChange}
+                >
+                  <option value="">Selecione um estado</option>
+                  <option value="AC">Acre</option>
+                  <option value="AL">Alagoas</option>
+                  <option value="AP">Amapá</option>
+                  <option value="AM">Amazonas</option>
+                  <option value="BA">Bahia</option>
+                  <option value="CE">Ceará</option>
+                  <option value="DF">Distrito Federal</option>
+                  <option value="ES">Espírito Santo</option>
+                  <option value="GO">Goiás</option>
+                  <option value="MA">Maranhão</option>
+                  <option value="MT">Mato Grosso</option>
+                  <option value="MS">Mato Grosso do Sul</option>
+                  <option value="MG">Minas Gerais</option>
+                  <option value="PA">Pará</option>
+                  <option value="PB">Paraíba</option>
+                  <option value="PR">Paraná</option>
+                  <option value="PE">Pernambuco</option>
+                  <option value="PI">Piauí</option>
+                  <option value="RJ">Rio de Janeiro</option>
+                  <option value="RN">Rio Grande do Norte</option>
+                  <option value="RS">Rio Grande do Sul</option>
+                  <option value="RO">Rondônia</option>
+                  <option value="RR">Roraima</option>
+                  <option value="SC">Santa Catarina</option>
+                  <option value="SP">São Paulo</option>
+                  <option value="SE">Sergipe</option>
+                  <option value="TO">Tocantins</option>
+                </select>
+              </div>
             </div>
             
             <div className="flex justify-end gap-3">
@@ -305,63 +299,288 @@ const FazendaFormModal = ({
   );
 };
 
-const DeleteConfirmModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm,
-  itemName 
+// Fazenda Card component
+const FazendaCard = ({ 
+  fazenda, 
+  onEdit, 
+  onDelete, 
+  onView 
 }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onConfirm: () => Promise<void>;
-  itemName: string;
+  fazenda: Fazenda; 
+  onEdit: (id: string) => void; 
+  onDelete: (id: string) => void; 
+  onView: (id: string) => void; 
 }) => {
-  const [isDeleting, setIsDeleting] = useState(false);
+  return (
+    <Glass hover={true} className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <i className="fa-solid fa-wheat-awn text-primary text-lg sm:text-xl"></i>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-semibold text-mono-900 line-clamp-1">{fazenda.nome}</h3>
+            <p className="text-mono-600 text-sm sm:text-base">{fazenda.cidade}, {fazenda.estado}</p>
+          </div>
+        </div>
+        <div className="flex gap-2 mb-4 sm:mb-0">
+          <button 
+            onClick={() => onView(fazenda.id)}
+            className="p-2 text-mono-600 hover:text-primary transition-colors"
+            title="Visualizar"
+          >
+            <i className="fa-solid fa-eye"></i>
+          </button>
+          <button 
+            onClick={() => onEdit(fazenda.id)}
+            className="p-2 text-mono-600 hover:text-primary transition-colors"
+            title="Editar"
+          >
+            <i className="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button 
+            onClick={() => onDelete(fazenda.id)}
+            className="p-2 text-mono-600 hover:text-red-500 transition-colors"
+            title="Excluir"
+          >
+            <i className="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
+        <div>
+          <div className="text-xs sm:text-sm text-mono-500">Endereço</div>
+          <div className="font-medium text-sm sm:text-base truncate">{fazenda.endereco || 'Não informado'}</div>
+        </div>
+        <div>
+          <div className="text-xs sm:text-sm text-mono-500">Área Total</div>
+          <div className="font-medium text-sm sm:text-base">{fazenda.area_total ? `${fazenda.area_total.toLocaleString('pt-BR')} ha` : 'Não informado'}</div>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 pt-4 border-t border-mono-200">
+        <div className="text-center">
+          <div className="text-mono-500 text-xs">Talhões</div>
+          <div className="font-semibold text-lg">{fazenda.stats?.talhoes || 0}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-mono-500 text-xs">Maquinários</div>
+          <div className="font-semibold text-lg">{fazenda.stats?.maquinarios || 0}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-mono-500 text-xs">Funcionários</div>
+          <div className="font-semibold text-lg">{fazenda.stats?.trabalhadores || 0}</div>
+        </div>
+      </div>
+    </Glass>
+  );
+};
+
+// Fazenda Detail View component
+const FazendaDetailView = ({ 
+  fazenda, 
+  onClose 
+}: { 
+  fazenda: Fazenda | null; 
+  onClose: () => void; 
+}) => {
+  const [activeTab, setActiveTab] = useState('info');
   
-  if (!isOpen) return null;
-  
-  const handleConfirm = async () => {
-    setIsDeleting(true);
-    try {
-      await onConfirm();
-    } finally {
-      setIsDeleting(false);
-      onClose();
-    }
-  };
+  if (!fazenda) return null;
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-mono-900/50 backdrop-blur-sm">
-      <div className="animate-scale-in w-full max-w-md">
-        <Glass intensity="high" className="p-6">
-          <h3 className="text-xl font-semibold mb-4">Confirmar Exclusão</h3>
-          <p className="text-mono-700 mb-6">
-            Tem certeza que deseja excluir <strong>{itemName}</strong>? Esta ação não pode ser desfeita.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button
+      <div className="animate-scale-in w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <Glass intensity="high" className="p-0 overflow-hidden">
+          <div className="flex justify-between items-center p-6 border-b border-mono-200">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <i className="fa-solid fa-wheat-awn text-primary"></i>
+              <span>{fazenda.nome}</span>
+            </h2>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-mono-100"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          
+          <Tabs defaultValue="info" className="p-6" onValueChange={setActiveTab}>
+            <TabsList className="mb-6">
+              <TabsTrigger value="info" className="flex items-center gap-2">
+                <i className="fa-solid fa-info-circle"></i>
+                <span>Informações</span>
+              </TabsTrigger>
+              <TabsTrigger value="talhoes" className="flex items-center gap-2">
+                <i className="fa-solid fa-layer-group"></i>
+                <span>Talhões</span>
+              </TabsTrigger>
+              <TabsTrigger value="maquinarios" className="flex items-center gap-2">
+                <i className="fa-solid fa-tractor"></i>
+                <span>Maquinários</span>
+              </TabsTrigger>
+              <TabsTrigger value="trabalhadores" className="flex items-center gap-2">
+                <i className="fa-solid fa-users"></i>
+                <span>Trabalhadores</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="info">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Dados Gerais</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-sm text-mono-500">Nome</div>
+                        <div className="font-medium">{fazenda.nome}</div>
+                      </div>
+                      <Separator />
+                      <div>
+                        <div className="text-sm text-mono-500">Endereço</div>
+                        <div className="font-medium">{fazenda.endereco || 'Não informado'}</div>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-mono-500">Cidade</div>
+                          <div className="font-medium">{fazenda.cidade || 'Não informado'}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-mono-500">Estado</div>
+                          <div className="font-medium">{fazenda.estado || 'Não informado'}</div>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div>
+                        <div className="text-sm text-mono-500">Área Total</div>
+                        <div className="font-medium">{fazenda.area_total ? `${fazenda.area_total.toLocaleString('pt-BR')} hectares` : 'Não informado'}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Estatísticas</h3>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="text-center p-4 bg-mono-50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary mb-1">{fazenda.stats?.talhoes || 0}</div>
+                        <div className="text-mono-600">Talhões</div>
+                      </div>
+                      <div className="text-center p-4 bg-mono-50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary mb-1">{fazenda.stats?.maquinarios || 0}</div>
+                        <div className="text-mono-600">Maquinários</div>
+                      </div>
+                      <div className="text-center p-4 bg-mono-50 rounded-lg">
+                        <div className="text-2xl font-bold text-primary mb-1">{fazenda.stats?.trabalhadores || 0}</div>
+                        <div className="text-mono-600">Trabalhadores</div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-mono-50 p-4 rounded-lg">
+                      <h4 className="font-medium mb-2">Criado em</h4>
+                      <p className="text-mono-600">
+                        {new Date(fazenda.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="talhoes">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold">Talhões</h3>
+                    <Button variant="outline" className="text-primary border-primary hover:bg-primary/10">
+                      <i className="fa-solid fa-plus mr-2"></i>
+                      Adicionar Talhão
+                    </Button>
+                  </div>
+                  
+                  {fazenda.stats?.talhoes === 0 ? (
+                    <div className="text-center py-12 text-mono-500">
+                      <i className="fa-solid fa-layer-group text-4xl mb-2"></i>
+                      <p className="text-lg mb-1">Nenhum talhão cadastrado</p>
+                      <p className="text-sm">Adicione talhões para gerenciar sua área de cultivo</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Aqui viriam os cards de talhões */}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="maquinarios">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold">Maquinários</h3>
+                    <Button variant="outline" className="text-primary border-primary hover:bg-primary/10">
+                      <i className="fa-solid fa-plus mr-2"></i>
+                      Adicionar Maquinário
+                    </Button>
+                  </div>
+                  
+                  {fazenda.stats?.maquinarios === 0 ? (
+                    <div className="text-center py-12 text-mono-500">
+                      <i className="fa-solid fa-tractor text-4xl mb-2"></i>
+                      <p className="text-lg mb-1">Nenhum maquinário cadastrado</p>
+                      <p className="text-sm">Adicione maquinários para gerenciar seus equipamentos</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Aqui viriam os cards de maquinários */}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="trabalhadores">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold">Trabalhadores</h3>
+                    <Button variant="outline" className="text-primary border-primary hover:bg-primary/10">
+                      <i className="fa-solid fa-plus mr-2"></i>
+                      Adicionar Trabalhador
+                    </Button>
+                  </div>
+                  
+                  {fazenda.stats?.trabalhadores === 0 ? (
+                    <div className="text-center py-12 text-mono-500">
+                      <i className="fa-solid fa-users text-4xl mb-2"></i>
+                      <p className="text-lg mb-1">Nenhum trabalhador cadastrado</p>
+                      <p className="text-sm">Adicione trabalhadores para gerenciar sua equipe</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Aqui viriam os cards de trabalhadores */}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="flex justify-end gap-3 p-6 border-t border-mono-200">
+            <button 
               onClick={onClose}
               className="button-secondary"
-              disabled={isDeleting}
             >
-              Cancelar
+              Fechar
             </button>
-            <button
-              onClick={handleConfirm}
-              className="button-destructive"
-              disabled={isDeleting}
+            <button 
+              className="button-primary"
             >
-              {isDeleting ? (
-                <>
-                  <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>
-                  Excluindo...
-                </>
-              ) : (
-                <>
-                  <i className="fa-solid fa-trash mr-2"></i>
-                  Excluir
-                </>
-              )}
+              Editar Fazenda
             </button>
           </div>
         </Glass>
@@ -370,13 +589,56 @@ const DeleteConfirmModal = ({
   );
 };
 
+// Delete Confirmation Modal
+const DeleteConfirmModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+}) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-mono-900/50 backdrop-blur-sm">
+      <div className="animate-scale-in w-full max-w-md">
+        <Glass intensity="high" className="p-6">
+          <h3 className="text-xl font-semibold mb-4">Confirmar Exclusão</h3>
+          <p className="text-mono-700 mb-6">
+            Tem certeza que deseja excluir esta fazenda? Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="button-secondary"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              className="button-destructive"
+            >
+              <i className="fa-solid fa-trash mr-2"></i>
+              Excluir
+            </button>
+          </div>
+        </Glass>
+      </div>
+    </div>
+  );
+};
+
+// Main Fazendas component
 const Fazendas = () => {
   const [fazendas, setFazendas] = useState<Fazenda[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingFazenda, setEditingFazenda] = useState<string | null>(null);
-  const [deletingFazenda, setDeletingFazenda] = useState<Fazenda | null>(null);
+  const [deletingFazenda, setDeletingFazenda] = useState<string | null>(null);
+  const [viewingFazenda, setViewingFazenda] = useState<Fazenda | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   const { user } = useAuth();
@@ -388,72 +650,53 @@ const Fazendas = () => {
       try {
         setIsLoading(true);
         
-        // Get farms
+        // Fetch all farms for this user
         const { data: fazendasData, error: fazendasError } = await supabase
           .from('fazendas')
           .select('*')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
           
         if (fazendasError) throw fazendasError;
         
-        // Get counts for each farm
-        const fazendaIds = (fazendasData || []).map(f => f.id);
-        
-        if (fazendaIds.length > 0) {
-          // Get talhoes counts - use a different approach without .group()
-          const { data: talhoesData, error: talhoesError } = await supabase
+        // For each farm, fetch additional statistics
+        const enhancedFazendas = await Promise.all(fazendasData.map(async (fazenda: Fazenda) => {
+          // Count talhoes
+          const { count: talhoesCount, error: talhoesError } = await supabase
             .from('talhoes')
-            .select('fazenda_id')
-            .in('fazenda_id', fazendaIds);
+            .select('id', { count: 'exact', head: true })
+            .eq('fazenda_id', fazenda.id);
             
           if (talhoesError) throw talhoesError;
           
-          // Get maquinarios counts
-          const { data: maquinariosData, error: maquinariosError } = await supabase
+          // Count maquinarios
+          const { count: maquinariosCount, error: maquinariosError } = await supabase
             .from('maquinarios')
-            .select('fazenda_id')
-            .in('fazenda_id', fazendaIds);
+            .select('id', { count: 'exact', head: true })
+            .eq('fazenda_id', fazenda.id);
             
           if (maquinariosError) throw maquinariosError;
           
-          // Get trabalhadores counts
-          const { data: trabalhadoresData, error: trabalhadoresError } = await supabase
+          // Count trabalhadores
+          const { count: trabalhadoresCount, error: trabalhadoresError } = await supabase
             .from('trabalhadores')
-            .select('fazenda_id')
-            .in('fazenda_id', fazendaIds);
+            .select('id', { count: 'exact', head: true })
+            .eq('fazenda_id', fazenda.id);
             
           if (trabalhadoresError) throw trabalhadoresError;
           
-          // Calculate counts manually
-          const talhoesCounts = fazendaIds.reduce<Record<string, number>>((acc, id) => {
-            acc[id] = talhoesData?.filter(t => t.fazenda_id === id).length || 0;
-            return acc;
-          }, {});
-          
-          const maquinariosCounts = fazendaIds.reduce<Record<string, number>>((acc, id) => {
-            acc[id] = maquinariosData?.filter(m => m.fazenda_id === id).length || 0;
-            return acc;
-          }, {});
-          
-          const trabalhadoresCounts = fazendaIds.reduce<Record<string, number>>((acc, id) => {
-            acc[id] = trabalhadoresData?.filter(t => t.fazenda_id === id).length || 0;
-            return acc;
-          }, {});
-          
-          // Map counts to farms
-          const fazendasWithCounts = (fazendasData || []).map(fazenda => {
-            return {
-              ...fazenda,
-              talhoes_count: talhoesCounts[fazenda.id] || 0,
-              maquinarios_count: maquinariosCounts[fazenda.id] || 0,
-              trabalhadores_count: trabalhadoresCounts[fazenda.id] || 0,
-            };
-          });
-          
-          setFazendas(fazendasWithCounts);
-        } else {
-          setFazendas([]);
-        }
+          // Return enhanced fazenda with stats
+          return {
+            ...fazenda,
+            stats: {
+              talhoes: talhoesCount || 0,
+              maquinarios: maquinariosCount || 0,
+              trabalhadores: trabalhadoresCount || 0
+            }
+          };
+        }));
+        
+        setFazendas(enhancedFazendas);
       } catch (error) {
         console.error('Erro ao buscar fazendas:', error);
         toast.error('Erro ao carregar fazendas');
@@ -470,44 +713,53 @@ const Fazendas = () => {
     setIsModalOpen(true);
   };
   
+  const handleAddFazenda = (newFazenda: Fazenda) => {
+    setFazendas(prev => [newFazenda, ...prev]);
+  };
+  
   const handleDelete = (id: string) => {
-    const fazenda = fazendas.find(f => f.id === id);
-    if (fazenda) {
-      setDeletingFazenda(fazenda);
-      setIsDeleteModalOpen(true);
-    }
+    setDeletingFazenda(id);
+    setIsDeleteModalOpen(true);
   };
   
   const handleView = (id: string) => {
-    // For now, just redirect to talhoes with filter
-    window.location.href = `/talhoes?fazenda=${id}`;
+    const fazenda = fazendas.find(f => f.id === id) || null;
+    setViewingFazenda(fazenda);
   };
   
   const confirmDelete = async () => {
     if (!deletingFazenda || !user) return;
     
     try {
+      const fazenda = fazendas.find(f => f.id === deletingFazenda);
+      
       const { error } = await supabase
         .from('fazendas')
         .delete()
-        .eq('id', deletingFazenda.id);
+        .eq('id', deletingFazenda);
         
       if (error) throw error;
       
       // Register activity
-      await supabase.from('atividades').insert({
-        user_id: user.id,
-        tipo: 'exclusao',
-        descricao: `Fazenda ${deletingFazenda.nome} foi excluída`,
-        entidade_tipo: 'fazenda',
-        entidade_id: deletingFazenda.id
-      });
+      if (fazenda) {
+        await supabase.from('atividades').insert({
+          user_id: user.id,
+          tipo: 'exclusao',
+          descricao: `Fazenda ${fazenda.nome} foi excluída`,
+          entidade_tipo: 'fazenda',
+          entidade_id: deletingFazenda
+        });
+      }
       
-      setFazendas(prev => prev.filter(f => f.id !== deletingFazenda.id));
+      // Update fazendas list without reloading
+      setFazendas(prev => prev.filter(f => f.id !== deletingFazenda));
       toast.success('Fazenda excluída com sucesso!');
     } catch (error: any) {
       console.error('Erro ao excluir fazenda:', error);
       toast.error(`Erro ao excluir fazenda: ${error.message}`);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeletingFazenda(null);
     }
   };
   
@@ -516,9 +768,10 @@ const Fazendas = () => {
     setEditingFazenda(null);
   };
   
-  const filteredFazendas = fazendas.filter(fazenda => 
+  const filteredFazendas = fazendas.filter(fazenda =>
     fazenda.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (fazenda.localizacao && fazenda.localizacao.toLowerCase().includes(searchTerm.toLowerCase()))
+    fazenda.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    fazenda.estado?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   return (
@@ -526,7 +779,7 @@ const Fazendas = () => {
       <div className="page-transition">
         <PageTitle 
           title="Fazendas" 
-          subtitle="Gerencie suas propriedades"
+          subtitle="Gerencie suas propriedades rurais"
           icon="fa-solid fa-wheat-awn"
           action={
             <button 
@@ -543,10 +796,10 @@ const Fazendas = () => {
           <div className="relative">
             <input
               type="text"
-              placeholder="Buscar fazendas..."
+              placeholder="Buscar fazendas por nome, cidade ou estado..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
+              className="input-field pl-10 w-full md:w-1/2"
             />
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-mono-500">
               <i className="fa-solid fa-search"></i>
@@ -564,7 +817,7 @@ const Fazendas = () => {
               <FazendaCard 
                 key={fazenda.id} 
                 fazenda={fazenda} 
-                onEdit={handleEdit}
+                onEdit={handleEdit} 
                 onDelete={handleDelete}
                 onView={handleView}
               />
@@ -578,7 +831,7 @@ const Fazendas = () => {
             <h3 className="text-xl font-medium mb-1">Nenhuma fazenda encontrada</h3>
             <p className="text-mono-500">
               {searchTerm ? 
-                `Não encontramos resultados para "${searchTerm}"` : 
+                `Não encontramos resultados para sua busca` : 
                 "Você ainda não cadastrou nenhuma fazenda"
               }
             </p>
@@ -594,8 +847,8 @@ const Fazendas = () => {
           </Glass>
         )}
         
-        {/* Add/Edit Farm Modal */}
-        <FazendaFormModal 
+        {/* Farm Form Modal */}
+        <FazendaForm 
           isOpen={isModalOpen} 
           onClose={closeModal} 
           isEditing={!!editingFazenda}
@@ -604,25 +857,28 @@ const Fazendas = () => {
               ? {
                   id: editingFazenda,
                   nome: fazendas.find(f => f.id === editingFazenda)?.nome || '',
-                  localizacao: fazendas.find(f => f.id === editingFazenda)?.localizacao || '',
+                  endereco: fazendas.find(f => f.id === editingFazenda)?.endereco || '',
                   area_total: fazendas.find(f => f.id === editingFazenda)?.area_total?.toString() || '',
-                  descricao: fazendas.find(f => f.id === editingFazenda)?.descricao || '',
-                  data_aquisicao: fazendas.find(f => f.id === editingFazenda)?.data_aquisicao || '',
+                  cidade: fazendas.find(f => f.id === editingFazenda)?.cidade || '',
+                  estado: fazendas.find(f => f.id === editingFazenda)?.estado || ''
                 }
-              : { id: '', nome: '', localizacao: '', area_total: '', descricao: '', data_aquisicao: '' }
+              : { id: '', nome: '', endereco: '', area_total: '', cidade: '', estado: '' }
           }
+          onAddFazenda={handleAddFazenda}
         />
         
         {/* Delete Confirmation Modal */}
-        {deletingFazenda && (
-          <DeleteConfirmModal 
-            isOpen={isDeleteModalOpen} 
-            onClose={() => {
-              setIsDeleteModalOpen(false);
-              setDeletingFazenda(null);
-            }}
-            onConfirm={confirmDelete}
-            itemName={deletingFazenda.nome}
+        <DeleteConfirmModal 
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmDelete}
+        />
+        
+        {/* Farm Detail View */}
+        {viewingFazenda && (
+          <FazendaDetailView 
+            fazenda={viewingFazenda} 
+            onClose={() => setViewingFazenda(null)}
           />
         )}
       </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PageTitle } from '@/components/ui/PageTitle';
@@ -21,6 +22,8 @@ const Dashboard = () => {
     trabalhadores: 0,
     atividades: []
   });
+  const [showAllActivities, setShowAllActivities] = useState(false);
+  const [allActivities, setAllActivities] = useState([]);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -86,6 +89,17 @@ const Dashboard = () => {
           
         if (atividadesError) throw atividadesError;
         
+        // Fetch all activities (for when the user clicks "See all")
+        const { data: allAtividades, error: allAtividadesError } = await supabase
+          .from('atividades')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+          
+        if (allAtividadesError) throw allAtividadesError;
+        
+        setAllActivities(allAtividades || []);
+        
         setDashboardData({
           fazendas: fazendasData.length,
           talhoes: talhoesCount || 0,
@@ -131,7 +145,7 @@ const Dashboard = () => {
     
     return (
       <div key={activity.id} className="flex items-start gap-3 py-3 border-b border-mono-100 last:border-0">
-        <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
           <i className={`${icon} text-primary`}></i>
         </div>
         <div className="flex-1">
@@ -140,6 +154,11 @@ const Dashboard = () => {
         </div>
       </div>
     );
+  };
+  
+  // Toggle function for showing all activities
+  const toggleAllActivities = () => {
+    setShowAllActivities(!showAllActivities);
   };
   
   return (
@@ -160,7 +179,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <Glass className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <i className="fa-solid fa-wheat-awn text-primary text-xl"></i>
                   </div>
                   <div>
@@ -178,7 +197,7 @@ const Dashboard = () => {
               
               <Glass className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <i className="fa-solid fa-layer-group text-primary text-xl"></i>
                   </div>
                   <div>
@@ -196,7 +215,7 @@ const Dashboard = () => {
               
               <Glass className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <i className="fa-solid fa-tractor text-primary text-xl"></i>
                   </div>
                   <div>
@@ -214,7 +233,7 @@ const Dashboard = () => {
               
               <Glass className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <i className="fa-solid fa-users text-primary text-xl"></i>
                   </div>
                   <div>
@@ -247,21 +266,38 @@ const Dashboard = () => {
                           Últimas ações realizadas no sistema
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        {dashboardData.atividades.length > 0 ? (
-                          <div className="space-y-1">
-                            {dashboardData.atividades.map((activity: any) => formatActivity(activity))}
-                          </div>
+                      <CardContent className="max-h-96 overflow-y-auto">
+                        {showAllActivities ? (
+                          allActivities.length > 0 ? (
+                            <div className="space-y-1">
+                              {allActivities.map((activity: any) => formatActivity(activity))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-mono-500">
+                              <i className="fa-solid fa-history text-3xl mb-2"></i>
+                              <p>Nenhuma atividade registrada</p>
+                            </div>
+                          )
                         ) : (
-                          <div className="text-center py-6 text-mono-500">
-                            <i className="fa-solid fa-history text-3xl mb-2"></i>
-                            <p>Nenhuma atividade recente</p>
-                          </div>
+                          dashboardData.atividades.length > 0 ? (
+                            <div className="space-y-1">
+                              {dashboardData.atividades.map((activity: any) => formatActivity(activity))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-mono-500">
+                              <i className="fa-solid fa-history text-3xl mb-2"></i>
+                              <p>Nenhuma atividade recente</p>
+                            </div>
+                          )
                         )}
                       </CardContent>
                       <CardFooter>
-                        <Button variant="outline" className="w-full">
-                          Ver todas as atividades
+                        <Button 
+                          variant="outline" 
+                          className="w-full text-primary border-primary hover:bg-primary/10"
+                          onClick={toggleAllActivities}
+                        >
+                          {showAllActivities ? 'Mostrar apenas recentes' : 'Ver todas as atividades'}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -283,7 +319,7 @@ const Dashboard = () => {
                         </div>
                       </CardContent>
                       <CardFooter>
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full text-primary border-primary hover:bg-primary/10">
                           Criar nova tarefa
                         </Button>
                       </CardFooter>
@@ -304,7 +340,7 @@ const Dashboard = () => {
                     <Link to="/fazendas" className="block">
                       <Glass hover={true} className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <i className="fa-solid fa-plus text-primary"></i>
                           </div>
                           <div>
@@ -318,7 +354,7 @@ const Dashboard = () => {
                     <Link to="/talhoes" className="block">
                       <Glass hover={true} className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <i className="fa-solid fa-layer-group text-primary"></i>
                           </div>
                           <div>
@@ -332,7 +368,7 @@ const Dashboard = () => {
                     <Link to="/maquinarios" className="block">
                       <Glass hover={true} className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <i className="fa-solid fa-tractor text-primary"></i>
                           </div>
                           <div>
@@ -346,7 +382,7 @@ const Dashboard = () => {
                     <Link to="/trabalhadores" className="block">
                       <Glass hover={true} className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <i className="fa-solid fa-user-plus text-primary"></i>
                           </div>
                           <div>
