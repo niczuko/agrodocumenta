@@ -1,4 +1,3 @@
-
 // Fix for Fazendas.tsx to properly calculate counts without using .group()
 // This replacement approach calculates counts manually after fetching all related records
 
@@ -84,10 +83,9 @@ const FazendaForm = ({
       
       const fazendaParams = {
         nome: formData.nome,
-        endereco: formData.endereco,
+        localizacao: formData.endereco,
+        descricao: `${formData.cidade}, ${formData.estado}`,
         area_total: formData.area_total ? parseFloat(formData.area_total) : 0,
-        cidade: formData.cidade,
-        estado: formData.estado,
         user_id: user.id
       };
       
@@ -122,9 +120,16 @@ const FazendaForm = ({
           throw error;
         }
         
-        // Add stats property for the UI
-        const newFazenda = {
-          ...data,
+        // Properly transform the DB data to match our Fazenda type
+        const newFazenda: Fazenda = {
+          id: data.id,
+          nome: data.nome,
+          endereco: data.localizacao || '',
+          area_total: data.area_total || 0,
+          cidade: data.descricao?.split(',')[0]?.trim() || '',
+          estado: data.descricao?.split(',')[1]?.trim() || '',
+          created_at: data.created_at,
+          user_id: data.user_id,
           stats: {
             talhoes: 0,
             trabalhadores: 0,
