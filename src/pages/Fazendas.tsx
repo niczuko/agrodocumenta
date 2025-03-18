@@ -32,6 +32,19 @@ type Fazenda = {
   }
 };
 
+// Extended type for database response
+type FazendaDB = {
+  id: string;
+  nome: string;
+  localizacao: string | null;
+  descricao: string | null;
+  user_id: string;
+  area_total: number | null;
+  data_aquisicao: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // Fazenda Form component
 const FazendaForm = ({ 
   isOpen, 
@@ -660,12 +673,12 @@ const Fazendas = () => {
         if (fazendasError) throw fazendasError;
         
         // For each farm, fetch additional statistics
-        const enhancedFazendas = await Promise.all(fazendasData.map(async (fazenda: Fazenda) => {
+        const enhancedFazendas = await Promise.all((fazendasData as FazendaDB[]).map(async (fazendaDB: FazendaDB) => {
           // Count talhoes
           const { count: talhoesCount, error: talhoesError } = await supabase
             .from('talhoes')
             .select('id', { count: 'exact', head: true })
-            .eq('fazenda_id', fazenda.id);
+            .eq('fazenda_id', fazendaDB.id);
             
           if (talhoesError) throw talhoesError;
           
@@ -673,7 +686,7 @@ const Fazendas = () => {
           const { count: maquinariosCount, error: maquinariosError } = await supabase
             .from('maquinarios')
             .select('id', { count: 'exact', head: true })
-            .eq('fazenda_id', fazenda.id);
+            .eq('fazenda_id', fazendaDB.id);
             
           if (maquinariosError) throw maquinariosError;
           
@@ -681,19 +694,28 @@ const Fazendas = () => {
           const { count: trabalhadoresCount, error: trabalhadoresError } = await supabase
             .from('trabalhadores')
             .select('id', { count: 'exact', head: true })
-            .eq('fazenda_id', fazenda.id);
+            .eq('fazenda_id', fazendaDB.id);
             
           if (trabalhadoresError) throw trabalhadoresError;
           
-          // Return enhanced fazenda with stats
-          return {
-            ...fazenda,
+          // Transform FazendaDB to Fazenda
+          const fazenda: Fazenda = {
+            id: fazendaDB.id,
+            nome: fazendaDB.nome,
+            endereco: fazendaDB.localizacao || '',
+            area_total: fazendaDB.area_total || 0,
+            cidade: fazendaDB.descricao?.split(',')[0]?.trim() || '',
+            estado: fazendaDB.descricao?.split(',')[1]?.trim() || '',
+            created_at: fazendaDB.created_at,
+            user_id: fazendaDB.user_id,
             stats: {
               talhoes: talhoesCount || 0,
               maquinarios: maquinariosCount || 0,
               trabalhadores: trabalhadoresCount || 0
             }
           };
+          
+          return fazenda;
         }));
         
         setFazendas(enhancedFazendas);

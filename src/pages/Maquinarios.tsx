@@ -44,12 +44,10 @@ const MaquinarioCard = ({
   onDelete: (id: string) => void;
   onView: (id: string) => void;
 }) => {
-  // Calcular dias até próxima manutenção
   const diasAteManutencao = maquinario.proxima_manutencao 
     ? Math.floor((new Date(maquinario.proxima_manutencao).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
   
-  // Definir ícone com base no tipo de maquinário
   let tipoIcone = "fa-solid fa-tractor";
   if (maquinario.tipo.toLowerCase().includes('colheit')) {
     tipoIcone = "fa-solid fa-wheat-awn";
@@ -392,7 +390,8 @@ const MaquinarioFormModal = ({
     proxima_manutencao: '', 
     notas: '' 
   },
-  fazendas = []
+  fazendas = [],
+  onAddMaquinario
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
@@ -412,6 +411,7 @@ const MaquinarioFormModal = ({
     notas: string; 
   };
   fazendas: Fazenda[];
+  onAddMaquinario: (maquinario: Maquinario) => void;
 }) => {
   const [formData, setFormData] = useState(maquinarioData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -494,7 +494,7 @@ const MaquinarioFormModal = ({
         });
         
         // Adiciona o novo maquinário à lista
-        setMaquinarios(prev => [data as Maquinario, ...prev]);
+        onAddMaquinario(data as Maquinario);
         
         toast.success('Maquinário adicionado com sucesso!');
       }
@@ -768,7 +768,6 @@ const Maquinarios = () => {
       try {
         setIsLoading(true);
         
-        // Buscar fazendas
         const { data: fazendasData, error: fazendasError } = await supabase
           .from('fazendas')
           .select('id, nome')
@@ -777,7 +776,6 @@ const Maquinarios = () => {
         if (fazendasError) throw fazendasError;
         setFazendas(fazendasData || []);
         
-        // Buscar maquinários
         const { data: maquinariosData, error: maquinariosError } = await supabase
           .from('maquinarios')
           .select(`
@@ -838,7 +836,6 @@ const Maquinarios = () => {
         
       if (error) throw error;
       
-      // Registrar atividade
       if (maquinario) {
         await supabase.from('atividades').insert({
           user_id: user.id,
@@ -849,7 +846,6 @@ const Maquinarios = () => {
         });
       }
       
-      // Atualizar a lista de maquinários sem recarregar
       setMaquinarios(prev => prev.filter(m => m.id !== deletingMaquinario));
       toast.success('Maquinário excluído com sucesso!');
     } catch (error: any) {
@@ -864,6 +860,10 @@ const Maquinarios = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingMaquinario(null);
+  };
+  
+  const handleAddMaquinario = (newMaquinario: Maquinario) => {
+    setMaquinarios(prev => [newMaquinario, ...prev]);
   };
   
   const filteredMaquinarios = maquinarios.filter(maquinario => {
@@ -986,7 +986,6 @@ const Maquinarios = () => {
           </Glass>
         )}
         
-        {/* Modal para adicionar/editar maquinário */}
         <MaquinarioFormModal 
           isOpen={isModalOpen} 
           onClose={closeModal} 
@@ -1013,9 +1012,9 @@ const Maquinarios = () => {
               }
           }
           fazendas={fazendas}
+          onAddMaquinario={handleAddMaquinario}
         />
         
-        {/* Modal de confirmação de exclusão */}
         {isDeleteConfirmOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-mono-900/50 backdrop-blur-sm">
             <div className="animate-scale-in w-full max-w-md">
@@ -1044,7 +1043,6 @@ const Maquinarios = () => {
           </div>
         )}
         
-        {/* Modal de visualização detalhada */}
         {viewingMaquinario && (
           <MaquinarioDetailView 
             maquinario={viewingMaquinario}
