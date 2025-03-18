@@ -1,15 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
 import { PageTitle } from '@/components/ui/PageTitle';
-import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 
 type Fazenda = {
   id: string;
@@ -41,7 +36,6 @@ const TrabalhadorCard = ({
   onDelete: (id: string) => void;
   onView: (id: string) => void;
 }) => {
-  // Calcular tempo de contratação
   const getTempoContratacao = (dataContratacao: string) => {
     if (!dataContratacao) return 'Não informado';
     
@@ -59,7 +53,6 @@ const TrabalhadorCard = ({
     return `${anos} ${anos === 1 ? 'ano' : 'anos'} e ${meses} ${meses === 1 ? 'mês' : 'meses'}`;
   };
   
-  // Gerar as iniciais para o avatar
   const getInitials = (nome: string) => {
     if (!nome) return 'NN';
     
@@ -170,7 +163,6 @@ const TrabalhadorDetailView = ({
   
   if (!trabalhador) return null;
   
-  // Gerar as iniciais para o avatar
   const getInitials = (nome: string) => {
     if (!nome) return 'NN';
     
@@ -180,7 +172,6 @@ const TrabalhadorDetailView = ({
     return (nomes[0].charAt(0) + nomes[nomes.length - 1].charAt(0)).toUpperCase();
   };
   
-  // Calcular tempo de contratação
   const getTempoContratacao = (dataContratacao: string) => {
     if (!dataContratacao) return 'Não informado';
     
@@ -454,7 +445,6 @@ const TrabalhadorFormModal = ({
           throw error;
         }
         
-        // Registrar atividade
         await supabase.from('atividades').insert({
           user_id: user.id,
           tipo: 'atualizacao',
@@ -475,7 +465,6 @@ const TrabalhadorFormModal = ({
           throw error;
         }
         
-        // Registrar atividade
         await supabase.from('atividades').insert({
           user_id: user.id,
           tipo: 'criacao',
@@ -688,7 +677,6 @@ const Trabalhadores = () => {
       try {
         setIsLoading(true);
         
-        // Buscar fazendas
         const { data: fazendasData, error: fazendasError } = await supabase
           .from('fazendas')
           .select('id, nome')
@@ -697,7 +685,6 @@ const Trabalhadores = () => {
         if (fazendasError) throw fazendasError;
         setFazendas(fazendasData || []);
         
-        // Buscar trabalhadores
         const { data: trabalhadoresData, error: trabalhadoresError } = await supabase
           .from('trabalhadores')
           .select(`
@@ -754,7 +741,6 @@ const Trabalhadores = () => {
         
       if (error) throw error;
       
-      // Registrar atividade
       if (trabalhador) {
         await supabase.from('atividades').insert({
           user_id: user.id,
@@ -901,7 +887,6 @@ const Trabalhadores = () => {
           </Glass>
         )}
         
-        {/* Modal para adicionar/editar trabalhador */}
         <TrabalhadorFormModal 
           isOpen={isModalOpen} 
           onClose={closeModal} 
@@ -926,7 +911,6 @@ const Trabalhadores = () => {
           fazendas={fazendas}
         />
         
-        {/* Modal de confirmação de exclusão */}
         {isDeleteConfirmOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-mono-900/50 backdrop-blur-sm">
             <div className="animate-scale-in w-full max-w-md">
@@ -955,7 +939,6 @@ const Trabalhadores = () => {
           </div>
         )}
         
-        {/* Modal de visualização detalhada */}
         {viewingTrabalhador && (
           <TrabalhadorDetailView 
             trabalhador={viewingTrabalhador}

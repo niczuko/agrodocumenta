@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { PageTitle } from '@/components/ui/PageTitle';
-import { Glass } from '@/components/ui/Glass';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Glass } from '@/components/ui/Glass';
+import { PageTitle } from '@/components/ui/PageTitle';
+import { toast } from '@/components/ui/sonner';
 
 type ProfileType = {
   id: string;

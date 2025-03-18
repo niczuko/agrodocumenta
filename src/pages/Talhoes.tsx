@@ -1,14 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
 import { PageTitle } from '@/components/ui/PageTitle';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 
 type Fazenda = {
   id: string;
@@ -20,122 +24,98 @@ type Talhao = {
   fazenda_id: string;
   nome: string;
   area_hectare: number;
-  cultivo_atual: string;
-  tipo_solo: string;
-  sistema_irrigacao: string;
-  data_plantio: string;
-  previsao_colheita: string;
+  cultivo_atual: string | null;
+  data_plantio: string | null;
+  previsao_colheita: string | null;
+  tipo_solo: string | null;
+  sistema_irrigacao: string | null;
+  coordenadas: string | null;
   created_at: string;
 };
 
-type Maquinario = {
-  id: string;
-  nome: string;
-  tipo: string;
-};
-
-type Trabalhador = {
-  id: string;
-  nome: string;
-  cargo: string;
-};
-
-const TalhaoCard = ({ talhao, onEdit, onDelete, onView }: { 
-  talhao: Talhao; 
+const TalhaoCard = ({ 
+  talhao, 
+  fazendaNome,
+  onEdit, 
+  onDelete, 
+  onView 
+}: { 
+  talhao: Talhao;
+  fazendaNome: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onView: (id: string) => void;
 }) => {
-  const dataPlantio = talhao.data_plantio ? new Date(talhao.data_plantio).toLocaleDateString('pt-BR') : 'Não informado';
-  const previsaoColheita = talhao.previsao_colheita ? new Date(talhao.previsao_colheita).toLocaleDateString('pt-BR') : 'Não informado';
-  
-  // Cálculo de dias até a colheita
-  const diasAteColheita = talhao.previsao_colheita 
-    ? Math.floor((new Date(talhao.previsao_colheita).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : null;
-  
   return (
-    <Glass className="p-0 overflow-hidden">
-      <div className="h-36 bg-gradient-to-r from-primary/20 to-primary/5 relative">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <i className="fa-solid fa-layer-group text-primary/40 text-6xl"></i>
+    <Glass hover={true} className="p-6">
+      <div className="flex justify-between">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <i className="fa-solid fa-layer-group text-primary text-xl"></i>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-mono-900">{talhao.nome}</h3>
+            <p className="text-mono-600">{talhao.area_hectare} hectares</p>
+          </div>
         </div>
-        <div className="absolute top-4 right-4 flex gap-2">
+        <div className="flex gap-2">
           <button 
             onClick={() => onView(talhao.id)}
-            className="p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+            className="p-2 text-mono-600 hover:text-primary transition-colors"
             title="Visualizar"
           >
-            <i className="fa-solid fa-eye text-primary"></i>
+            <i className="fa-solid fa-eye"></i>
           </button>
           <button 
             onClick={() => onEdit(talhao.id)}
-            className="p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+            className="p-2 text-mono-600 hover:text-primary transition-colors"
             title="Editar"
           >
-            <i className="fa-solid fa-pen-to-square text-primary"></i>
+            <i className="fa-solid fa-pen-to-square"></i>
           </button>
           <button 
             onClick={() => onDelete(talhao.id)}
-            className="p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+            className="p-2 text-mono-600 hover:text-red-500 transition-colors"
             title="Excluir"
           >
-            <i className="fa-solid fa-trash text-red-500"></i>
+            <i className="fa-solid fa-trash"></i>
           </button>
         </div>
       </div>
       
-      <div className="p-6">
-        <h3 className="text-xl font-semibold mb-2">{talhao.nome}</h3>
-        
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <div className="text-sm text-mono-500">Área</div>
-            <div className="font-medium">{talhao.area_hectare} hectares</div>
-          </div>
-          <div>
-            <div className="text-sm text-mono-500">Cultivo</div>
-            <div className="font-medium">{talhao.cultivo_atual || 'Não informado'}</div>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <div className="text-sm text-mono-500">Cultivo Atual</div>
+          <div className="font-medium">{talhao.cultivo_atual || 'Não informado'}</div>
+        </div>
+        <div>
+          <div className="text-sm text-mono-500">Tipo de Solo</div>
+          <div className="font-medium">{talhao.tipo_solo || 'Não informado'}</div>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <div className="text-sm text-mono-500">Fazenda</div>
+        <div className="font-medium">{fazendaNome}</div>
+      </div>
+      
+      <div className="flex justify-between items-center mt-2 pt-4 border-t border-mono-200">
+        <div>
+          <div className="text-sm text-mono-500">Plantio</div>
+          <div className="font-medium">
+            {talhao.data_plantio 
+              ? new Date(talhao.data_plantio).toLocaleDateString('pt-BR') 
+              : 'Não informado'}
           </div>
         </div>
-        
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <div className="text-sm text-mono-500">Solo</div>
-            <div className="font-medium">{talhao.tipo_solo || 'Não informado'}</div>
-          </div>
-          <div>
-            <div className="text-sm text-mono-500">Irrigação</div>
-            <div className="font-medium">{talhao.sistema_irrigacao || 'Não informado'}</div>
+        <div>
+          <div className="text-sm text-mono-500">Colheita</div>
+          <div className="font-medium">
+            {talhao.previsao_colheita 
+              ? new Date(talhao.previsao_colheita).toLocaleDateString('pt-BR') 
+              : 'Não informado'}
           </div>
         </div>
-        
-        <div className="border-t border-mono-200 pt-4 mb-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-mono-500">Plantio</div>
-              <div className="font-medium">{dataPlantio}</div>
-            </div>
-            <div>
-              <div className="text-sm text-mono-500">Colheita (prev.)</div>
-              <div className="font-medium">{previsaoColheita}</div>
-            </div>
-          </div>
-        </div>
-        
-        {diasAteColheita !== null && (
-          <div className={`mt-4 p-3 rounded-lg text-center text-sm font-medium ${
-            diasAteColheita < 0 
-              ? 'bg-red-50 text-red-700' 
-              : diasAteColheita <= 30 
-                ? 'bg-yellow-50 text-yellow-700'
-                : 'bg-green-50 text-green-700'
-          }`}>
-            {diasAteColheita < 0 
-              ? `Colheita atrasada em ${Math.abs(diasAteColheita)} dias` 
-              : `${diasAteColheita} dias até a colheita`}
-          </div>
-        )}
       </div>
     </Glass>
   );
@@ -143,17 +123,13 @@ const TalhaoCard = ({ talhao, onEdit, onDelete, onView }: {
 
 const TalhaoDetailView = ({ 
   talhao, 
-  onClose,
-  maquinarios,
-  trabalhadores
+  fazendaNome,
+  onClose
 }: { 
   talhao: Talhao | null;
+  fazendaNome: string;
   onClose: () => void;
-  maquinarios: Maquinario[];
-  trabalhadores: Trabalhador[];
 }) => {
-  const [activeTab, setActiveTab] = useState('info');
-  
   if (!talhao) return null;
   
   return (
@@ -161,7 +137,10 @@ const TalhaoDetailView = ({
       <div className="animate-scale-in w-full max-w-4xl">
         <Glass intensity="high" className="p-0 overflow-hidden">
           <div className="flex justify-between items-center p-6 border-b border-mono-200">
-            <h2 className="text-xl font-semibold">Detalhes do Talhão: {talhao.nome}</h2>
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <i className="fa-solid fa-layer-group text-primary"></i>
+              <span>{talhao.nome}</span>
+            </h2>
             <button 
               onClick={onClose}
               className="p-2 rounded-full hover:bg-mono-100"
@@ -170,30 +149,13 @@ const TalhaoDetailView = ({
             </button>
           </div>
           
-          <Tabs defaultValue="info" className="p-6" onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="info" className="flex items-center gap-2">
-                <i className="fa-solid fa-info-circle"></i>
-                <span>Informações</span>
-              </TabsTrigger>
-              <TabsTrigger value="maquinario" className="flex items-center gap-2">
-                <i className="fa-solid fa-tractor"></i>
-                <span>Maquinários</span>
-              </TabsTrigger>
-              <TabsTrigger value="trabalhador" className="flex items-center gap-2">
-                <i className="fa-solid fa-user-hard-hat"></i>
-                <span>Trabalhadores</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="info" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>Informações Gerais</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Dados Gerais</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm text-mono-500">Nome</div>
                         <div className="font-medium">{talhao.nome}</div>
@@ -202,150 +164,75 @@ const TalhaoDetailView = ({
                         <div className="text-sm text-mono-500">Área</div>
                         <div className="font-medium">{talhao.area_hectare} hectares</div>
                       </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <div className="text-sm text-mono-500">Fazenda</div>
+                      <div className="font-medium">{fazendaNome}</div>
+                    </div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="text-sm text-mono-500">Cultivo Atual</div>
                         <div className="font-medium">{talhao.cultivo_atual || 'Não informado'}</div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>Características</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
                       <div>
                         <div className="text-sm text-mono-500">Tipo de Solo</div>
                         <div className="font-medium">{talhao.tipo_solo || 'Não informado'}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-mono-500">Sistema de Irrigação</div>
-                        <div className="font-medium">{talhao.sistema_irrigacao || 'Não informado'}</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle>Datas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-sm text-mono-500">Data de Plantio</div>
-                      <div className="font-medium">
-                        {talhao.data_plantio 
-                          ? new Date(talhao.data_plantio).toLocaleDateString('pt-BR') 
-                          : 'Não informado'
-                        }
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-mono-500">Previsão de Colheita</div>
-                      <div className="font-medium">
-                        {talhao.previsao_colheita 
-                          ? new Date(talhao.previsao_colheita).toLocaleDateString('pt-BR') 
-                          : 'Não informado'
-                        }
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-mono-500">Criado em</div>
-                      <div className="font-medium">
-                        {new Date(talhao.created_at).toLocaleDateString('pt-BR')}
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-            
-            <TabsContent value="maquinario">
-              {maquinarios.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {maquinarios.map((maquinario) => (
-                      <TableRow key={maquinario.id}>
-                        <TableCell className="font-medium">{maquinario.nome}</TableCell>
-                        <TableCell>{maquinario.tipo}</TableCell>
-                        <TableCell>
-                          <button className="text-primary hover:text-primary/80">
-                            <i className="fa-solid fa-eye"></i>
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="mb-3 text-mono-400">
-                    <i className="fa-solid fa-tractor text-4xl"></i>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Datas Importantes</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-mono-500">Data de Plantio</div>
+                      <div className="font-medium">
+                        {talhao.data_plantio 
+                          ? new Date(talhao.data_plantio).toLocaleDateString('pt-BR') 
+                          : 'Não informada'}
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <div className="text-sm text-mono-500">Previsão de Colheita</div>
+                      <div className="font-medium">
+                        {talhao.previsao_colheita 
+                          ? new Date(talhao.previsao_colheita).toLocaleDateString('pt-BR') 
+                          : 'Não informada'}
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <div className="text-sm text-mono-500">Sistema de Irrigação</div>
+                      <div className="font-medium">{talhao.sistema_irrigacao || 'Não informado'}</div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-medium mb-2">Nenhum maquinário alocado</h3>
-                  <p className="text-mono-500">
-                    Este talhão não possui maquinários alocados
-                  </p>
-                  <button className="button-primary mt-4">
-                    <i className="fa-solid fa-plus mr-2"></i>
-                    Adicionar Maquinário
-                  </button>
-                </div>
-              )}
-            </TabsContent>
+                </CardContent>
+              </Card>
+            </div>
             
-            <TabsContent value="trabalhador">
-              {trabalhadores.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {trabalhadores.map((trabalhador) => (
-                      <TableRow key={trabalhador.id}>
-                        <TableCell className="font-medium">{trabalhador.nome}</TableCell>
-                        <TableCell>{trabalhador.cargo}</TableCell>
-                        <TableCell>
-                          <button className="text-primary hover:text-primary/80">
-                            <i className="fa-solid fa-eye"></i>
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="mb-3 text-mono-400">
-                    <i className="fa-solid fa-users text-4xl"></i>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Localização</h3>
+                {talhao.coordenadas ? (
+                  <div className="text-mono-700">
+                    <i className="fa-solid fa-location-dot mr-2"></i>
+                    {talhao.coordenadas}
                   </div>
-                  <h3 className="text-xl font-medium mb-2">Nenhum trabalhador alocado</h3>
-                  <p className="text-mono-500">
-                    Este talhão não possui trabalhadores alocados
-                  </p>
-                  <button className="button-primary mt-4">
-                    <i className="fa-solid fa-plus mr-2"></i>
-                    Adicionar Trabalhador
-                  </button>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                ) : (
+                  <div className="text-mono-500">
+                    <i className="fa-solid fa-map-marker-alt mr-2"></i>
+                    Coordenadas não informadas
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
           
           <div className="flex justify-end gap-3 p-6 border-t border-mono-200">
             <button 
@@ -353,6 +240,12 @@ const TalhaoDetailView = ({
               className="button-secondary"
             >
               Fechar
+            </button>
+            <button 
+              onClick={() => onClose()}
+              className="button-primary"
+            >
+              Editar Talhão
             </button>
           </div>
         </Glass>
@@ -371,10 +264,11 @@ const TalhaoFormModal = ({
     nome: '', 
     area_hectare: '', 
     cultivo_atual: '', 
+    data_plantio: '', 
+    previsao_colheita: '', 
     tipo_solo: '', 
     sistema_irrigacao: '', 
-    data_plantio: '', 
-    previsao_colheita: '' 
+    coordenadas: '' 
   },
   fazendas = []
 }: { 
@@ -387,10 +281,11 @@ const TalhaoFormModal = ({
     nome: string; 
     area_hectare: string; 
     cultivo_atual: string; 
-    tipo_solo: string; 
-    sistema_irrigacao: string; 
     data_plantio: string; 
     previsao_colheita: string; 
+    tipo_solo: string; 
+    sistema_irrigacao: string; 
+    coordenadas: string; 
   };
   fazendas: Fazenda[];
 }) => {
@@ -420,12 +315,13 @@ const TalhaoFormModal = ({
       const talhaoParams = {
         fazenda_id: formData.fazenda_id,
         nome: formData.nome,
-        area_hectare: parseFloat(formData.area_hectare),
-        cultivo_atual: formData.cultivo_atual,
-        tipo_solo: formData.tipo_solo,
-        sistema_irrigacao: formData.sistema_irrigacao,
+        area_hectare: formData.area_hectare ? parseFloat(formData.area_hectare) : null,
+        cultivo_atual: formData.cultivo_atual || null,
         data_plantio: formData.data_plantio || null,
-        previsao_colheita: formData.previsao_colheita || null
+        previsao_colheita: formData.previsao_colheita || null,
+        tipo_solo: formData.tipo_solo || null,
+        sistema_irrigacao: formData.sistema_irrigacao || null,
+        coordenadas: formData.coordenadas || null
       };
       
       if (isEditing) {
@@ -466,18 +362,18 @@ const TalhaoFormModal = ({
         await supabase.from('atividades').insert({
           user_id: user.id,
           tipo: 'criacao',
-          descricao: `Talhão ${formData.nome} foi criado`,
+          descricao: `Talhão ${formData.nome} foi adicionado`,
           entidade_tipo: 'talhao',
           entidade_id: data.id
         });
         
-        toast.success('Talhão criado com sucesso!');
+        toast.success('Talhão adicionado com sucesso!');
       }
       
       onClose();
     } catch (error: any) {
       console.error('Erro:', error);
-      toast.error(`Erro ao ${isEditing ? 'atualizar' : 'criar'} talhão: ${error.message}`);
+      toast.error(`Erro ao ${isEditing ? 'atualizar' : 'adicionar'} talhão: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -549,12 +445,11 @@ const TalhaoFormModal = ({
                   name="area_hectare"
                   type="number"
                   step="0.01"
-                  min="0"
                   required
                   className="input-field"
                   value={formData.area_hectare}
                   onChange={handleChange}
-                  placeholder="Ex: 5.5"
+                  placeholder="Ex: 10.5"
                 />
               </div>
               
@@ -569,44 +464,12 @@ const TalhaoFormModal = ({
                   className="input-field"
                   value={formData.cultivo_atual}
                   onChange={handleChange}
-                  placeholder="Ex: Milho, Soja, etc."
+                  placeholder="Ex: Soja"
                 />
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label htmlFor="tipo_solo" className="block text-sm font-medium text-mono-700 mb-1">
-                  Tipo de Solo
-                </label>
-                <input
-                  id="tipo_solo"
-                  name="tipo_solo"
-                  type="text"
-                  className="input-field"
-                  value={formData.tipo_solo}
-                  onChange={handleChange}
-                  placeholder="Ex: Argiloso, Arenoso, etc."
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="sistema_irrigacao" className="block text-sm font-medium text-mono-700 mb-1">
-                  Sistema de Irrigação
-                </label>
-                <input
-                  id="sistema_irrigacao"
-                  name="sistema_irrigacao"
-                  type="text"
-                  className="input-field"
-                  value={formData.sistema_irrigacao}
-                  onChange={handleChange}
-                  placeholder="Ex: Aspersão, Gotejamento, etc."
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <label htmlFor="data_plantio" className="block text-sm font-medium text-mono-700 mb-1">
                   Data de Plantio
@@ -636,6 +499,53 @@ const TalhaoFormModal = ({
               </div>
             </div>
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label htmlFor="tipo_solo" className="block text-sm font-medium text-mono-700 mb-1">
+                  Tipo de Solo
+                </label>
+                <input
+                  id="tipo_solo"
+                  name="tipo_solo"
+                  type="text"
+                  className="input-field"
+                  value={formData.tipo_solo}
+                  onChange={handleChange}
+                  placeholder="Ex: Argiloso"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="sistema_irrigacao" className="block text-sm font-medium text-mono-700 mb-1">
+                  Sistema de Irrigação
+                </label>
+                <input
+                  id="sistema_irrigacao"
+                  name="sistema_irrigacao"
+                  type="text"
+                  className="input-field"
+                  value={formData.sistema_irrigacao}
+                  onChange={handleChange}
+                  placeholder="Ex: Gotejamento"
+                />
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <label htmlFor="coordenadas" className="block text-sm font-medium text-mono-700 mb-1">
+                Coordenadas
+              </label>
+              <textarea
+                id="coordenadas"
+                name="coordenadas"
+                rows={3}
+                className="input-field"
+                value={formData.coordenadas}
+                onChange={handleChange}
+                placeholder="Ex: Latitude: -23.5505, Longitude: -46.6333"
+              ></textarea>
+            </div>
+            
             <div className="flex justify-end gap-3">
               <button
                 type="button"
@@ -653,10 +563,10 @@ const TalhaoFormModal = ({
                 {isSubmitting ? (
                   <>
                     <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>
-                    {isEditing ? 'Salvando...' : 'Criando...'}
+                    {isEditing ? 'Salvando...' : 'Adicionando...'}
                   </>
                 ) : (
-                  isEditing ? 'Salvar Alterações' : 'Criar Talhão'
+                  isEditing ? 'Salvar Alterações' : 'Adicionar Talhão'
                 )}
               </button>
             </div>
@@ -680,10 +590,6 @@ const Talhoes = () => {
   const [selectedFazenda, setSelectedFazenda] = useState<string | 'all'>('all');
   
   const { user } = useAuth();
-  
-  // Dados de exemplo para o modal de detalhes
-  const mockMaquinarios: Maquinario[] = [];
-  const mockTrabalhadores: Trabalhador[] = [];
   
   useEffect(() => {
     const fetchData = async () => {
@@ -710,10 +616,11 @@ const Talhoes = () => {
             nome, 
             area_hectare, 
             cultivo_atual, 
-            tipo_solo, 
-            sistema_irrigacao, 
             data_plantio, 
             previsao_colheita, 
+            tipo_solo, 
+            sistema_irrigacao, 
+            coordenadas, 
             created_at
           `)
           .order('created_at', { ascending: false });
@@ -787,8 +694,10 @@ const Talhoes = () => {
   };
   
   const filteredTalhoes = talhoes.filter(talhao => {
-    const matchesSearch = talhao.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                     (talhao.cultivo_atual && talhao.cultivo_atual.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = 
+      talhao.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (talhao.cultivo_atual && talhao.cultivo_atual.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (talhao.tipo_solo && talhao.tipo_solo.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesFazenda = selectedFazenda === 'all' || talhao.fazenda_id === selectedFazenda;
     return matchesSearch && matchesFazenda;
   });
@@ -803,7 +712,7 @@ const Talhoes = () => {
       <div className="page-transition">
         <PageTitle 
           title="Talhões" 
-          subtitle="Gerencie suas áreas de cultivo"
+          subtitle="Gerencie seus campos de cultivo"
           icon="fa-solid fa-layer-group"
           action={
             <button 
@@ -816,8 +725,8 @@ const Talhoes = () => {
           }
         />
         
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-1">
             <div className="relative">
               <input
                 type="text"
@@ -857,7 +766,8 @@ const Talhoes = () => {
             {filteredTalhoes.map(talhao => (
               <TalhaoCard 
                 key={talhao.id} 
-                talhao={talhao} 
+                talhao={talhao}
+                fazendaNome={getFazendaNome(talhao.fazenda_id)}
                 onEdit={handleEdit} 
                 onDelete={handleDelete}
                 onView={handleView}
@@ -899,14 +809,18 @@ const Talhoes = () => {
                   id: editingTalhao,
                   fazenda_id: talhoes.find(t => t.id === editingTalhao)?.fazenda_id || '',
                   nome: talhoes.find(t => t.id === editingTalhao)?.nome || '',
-                  area_hectare: talhoes.find(t => t.id === editingTalhao)?.area_hectare.toString() || '',
+                  area_hectare: talhoes.find(t => t.id === editingTalhao)?.area_hectare?.toString() || '',
                   cultivo_atual: talhoes.find(t => t.id === editingTalhao)?.cultivo_atual || '',
+                  data_plantio: talhoes.find(t => t.id === editingTalhao)?.data_plantio || '',
+                  previsao_colheita: talhoes.find(t => t.id === editingTalhao)?.previsao_colheita || '',
                   tipo_solo: talhoes.find(t => t.id === editingTalhao)?.tipo_solo || '',
                   sistema_irrigacao: talhoes.find(t => t.id === editingTalhao)?.sistema_irrigacao || '',
-                  data_plantio: talhoes.find(t => t.id === editingTalhao)?.data_plantio || '',
-                  previsao_colheita: talhoes.find(t => t.id === editingTalhao)?.previsao_colheita || ''
+                  coordenadas: talhoes.find(t => t.id === editingTalhao)?.coordenadas || ''
                 }
-              : { id: '', fazenda_id: '', nome: '', area_hectare: '', cultivo_atual: '', tipo_solo: '', sistema_irrigacao: '', data_plantio: '', previsao_colheita: '' }
+              : { 
+                id: '', fazenda_id: '', nome: '', area_hectare: '', cultivo_atual: '', 
+                data_plantio: '', previsao_colheita: '', tipo_solo: '', sistema_irrigacao: '', coordenadas: '' 
+              }
           }
           fazendas={fazendas}
         />
@@ -943,10 +857,9 @@ const Talhoes = () => {
         {/* Modal de visualização detalhada */}
         {viewingTalhao && (
           <TalhaoDetailView 
-            talhao={viewingTalhao} 
-            onClose={() => setViewingTalhao(null)} 
-            maquinarios={mockMaquinarios}
-            trabalhadores={mockTrabalhadores}
+            talhao={viewingTalhao}
+            fazendaNome={getFazendaNome(viewingTalhao.fazenda_id)} 
+            onClose={() => setViewingTalhao(null)}
           />
         )}
       </div>
