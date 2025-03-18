@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
@@ -19,7 +18,6 @@ type Fazenda = {
   trabalhadores_count?: number;
 };
 
-// FazendaCard component
 const FazendaCard = ({ 
   fazenda, 
   onEdit,
@@ -87,7 +85,6 @@ const FazendaCard = ({
   );
 };
 
-// Modal for adding/editing farms
 const FazendaFormModal = ({ 
   isOpen, 
   onClose, 
@@ -308,7 +305,6 @@ const FazendaFormModal = ({
   );
 };
 
-// Confirmation modal for deleting farms
 const DeleteConfirmModal = ({ 
   isOpen, 
   onClose, 
@@ -404,44 +400,53 @@ const Fazendas = () => {
         const fazendaIds = (fazendasData || []).map(f => f.id);
         
         if (fazendaIds.length > 0) {
-          // Get talhoes counts
+          // Get talhoes counts - use a different approach without .group()
           const { data: talhoesData, error: talhoesError } = await supabase
             .from('talhoes')
-            .select('fazenda_id, count')
-            .in('fazenda_id', fazendaIds)
-            .group('fazenda_id');
+            .select('fazenda_id')
+            .in('fazenda_id', fazendaIds);
             
           if (talhoesError) throw talhoesError;
           
           // Get maquinarios counts
           const { data: maquinariosData, error: maquinariosError } = await supabase
             .from('maquinarios')
-            .select('fazenda_id, count')
-            .in('fazenda_id', fazendaIds)
-            .group('fazenda_id');
+            .select('fazenda_id')
+            .in('fazenda_id', fazendaIds);
             
           if (maquinariosError) throw maquinariosError;
           
           // Get trabalhadores counts
           const { data: trabalhadoresData, error: trabalhadoresError } = await supabase
             .from('trabalhadores')
-            .select('fazenda_id, count')
-            .in('fazenda_id', fazendaIds)
-            .group('fazenda_id');
+            .select('fazenda_id')
+            .in('fazenda_id', fazendaIds);
             
           if (trabalhadoresError) throw trabalhadoresError;
           
+          // Calculate counts manually
+          const talhoesCounts = fazendaIds.reduce<Record<string, number>>((acc, id) => {
+            acc[id] = talhoesData?.filter(t => t.fazenda_id === id).length || 0;
+            return acc;
+          }, {});
+          
+          const maquinariosCounts = fazendaIds.reduce<Record<string, number>>((acc, id) => {
+            acc[id] = maquinariosData?.filter(m => m.fazenda_id === id).length || 0;
+            return acc;
+          }, {});
+          
+          const trabalhadoresCounts = fazendaIds.reduce<Record<string, number>>((acc, id) => {
+            acc[id] = trabalhadoresData?.filter(t => t.fazenda_id === id).length || 0;
+            return acc;
+          }, {});
+          
           // Map counts to farms
           const fazendasWithCounts = (fazendasData || []).map(fazenda => {
-            const talhoesCounts = talhoesData?.find(t => t.fazenda_id === fazenda.id);
-            const maquinariosCounts = maquinariosData?.find(m => m.fazenda_id === fazenda.id);
-            const trabalhadoresCounts = trabalhadoresData?.find(t => t.fazenda_id === fazenda.id);
-            
             return {
               ...fazenda,
-              talhoes_count: talhoesCounts ? parseInt(talhoesCounts.count) : 0,
-              maquinarios_count: maquinariosCounts ? parseInt(maquinariosCounts.count) : 0,
-              trabalhadores_count: trabalhadoresCounts ? parseInt(trabalhadoresCounts.count) : 0,
+              talhoes_count: talhoesCounts[fazenda.id] || 0,
+              maquinarios_count: maquinariosCounts[fazenda.id] || 0,
+              trabalhadores_count: trabalhadoresCounts[fazenda.id] || 0,
             };
           });
           
