@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Glass } from '@/components/ui/Glass';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +16,6 @@ const Login = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Se o usuário já estiver autenticado, redireciona para o dashboard
     if (user) {
       navigate('/dashboard');
     }
@@ -38,7 +36,6 @@ const Login = () => {
   
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden bg-gradient-to-br from-mono-50 to-mono-100">
-      {/* Elementos decorativos no fundo */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute top-20 left-[20%] w-64 h-64 rounded-full bg-primary/5 filter blur-[80px]"></div>
         <div className="absolute bottom-20 right-[20%] w-72 h-72 rounded-full bg-primary/10 filter blur-[100px]"></div>

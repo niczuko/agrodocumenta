@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -7,7 +6,7 @@ import { PageTitle } from '@/components/ui/PageTitle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 type DashboardStats = {
   fazendas: number;
@@ -213,15 +212,22 @@ const Dashboard = () => {
           
         if (fazendasError) throw fazendasError;
         
+        // Need to get the fazenda IDs to use in subsequent queries
+        const { data: fazendaIds, error: fazendaIdsError } = await supabase
+          .from('fazendas')
+          .select('id')
+          .eq('user_id', user.id);
+          
+        if (fazendaIdsError) throw fazendaIdsError;
+        
+        // Create a proper array of IDs
+        const fazendaIdArray = fazendaIds ? fazendaIds.map(f => f.id) : [];
+        
         // Buscar contagem de talhões
         const { count: talhoesCount, error: talhoesError } = await supabase
           .from('talhoes')
           .select('id', { count: 'exact', head: true })
-          .in('fazenda_id', fazendasCount === 0 ? [''] : supabase
-            .from('fazendas')
-            .select('id')
-            .eq('user_id', user.id)
-          );
+          .in('fazenda_id', fazendaIdArray.length > 0 ? fazendaIdArray : ['no-results']);
           
         if (talhoesError) throw talhoesError;
         
@@ -229,11 +235,7 @@ const Dashboard = () => {
         const { count: maquinariosCount, error: maquinariosError } = await supabase
           .from('maquinarios')
           .select('id', { count: 'exact', head: true })
-          .in('fazenda_id', fazendasCount === 0 ? [''] : supabase
-            .from('fazendas')
-            .select('id')
-            .eq('user_id', user.id)
-          );
+          .in('fazenda_id', fazendaIdArray.length > 0 ? fazendaIdArray : ['no-results']);
           
         if (maquinariosError) throw maquinariosError;
         
@@ -241,11 +243,7 @@ const Dashboard = () => {
         const { count: trabalhadoresCount, error: trabalhadoresError } = await supabase
           .from('trabalhadores')
           .select('id', { count: 'exact', head: true })
-          .in('fazenda_id', fazendasCount === 0 ? [''] : supabase
-            .from('fazendas')
-            .select('id')
-            .eq('user_id', user.id)
-          );
+          .in('fazenda_id', fazendaIdArray.length > 0 ? fazendaIdArray : ['no-results']);
           
         if (trabalhadoresError) throw trabalhadoresError;
         
