@@ -18,7 +18,7 @@ export type Tarefa = {
   priority: 'low' | 'normal' | 'high';
   status: 'pending' | 'completed';
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 };
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);

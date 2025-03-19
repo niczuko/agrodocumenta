@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PageTitle } from '@/components/ui/PageTitle';
@@ -17,7 +16,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Fixed for Dashboard.tsx to correctly fetch data and handle queries
 const Dashboard = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -35,8 +33,8 @@ const Dashboard = () => {
     title: '',
     description: '',
     due_date: '',
-    priority: 'normal',
-    status: 'pending'
+    priority: 'normal' as 'low' | 'normal' | 'high',
+    status: 'pending' as 'pending' | 'completed'
   });
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [userTasks, setUserTasks] = useState<Tarefa[]>([]);
@@ -132,11 +130,23 @@ const Dashboard = () => {
             if (fallbackError) {
               console.error('Error in fallback tasks fetch:', fallbackError);
               // If the query also fails, we'll just set empty tasks
-            } else {
-              setUserTasks(fallbackTasks || []);
+            } else if (fallbackTasks) {
+              // Ensure each task has the correct priority type
+              const typedTasks = fallbackTasks.map(task => ({
+                ...task,
+                priority: (task.priority as 'low' | 'normal' | 'high'),
+                status: (task.status as 'pending' | 'completed')
+              }));
+              setUserTasks(typedTasks);
             }
-          } else {
-            setUserTasks(tasks || []);
+          } else if (tasks) {
+            // Ensure each task has the correct priority type
+            const typedTasks = tasks.map(task => ({
+              ...task,
+              priority: (task.priority as 'low' | 'normal' | 'high'),
+              status: (task.status as 'pending' | 'completed')
+            }));
+            setUserTasks(typedTasks);
           }
         } catch (taskError) {
           console.error('Task fetching error:', taskError);
@@ -163,7 +173,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user]);
   
-  // Helper to format activity description
   const formatActivity = (activity: any) => {
     const date = new Date(activity.created_at);
     const formattedDate = new Intl.DateTimeFormat('pt-BR', {
@@ -201,12 +210,10 @@ const Dashboard = () => {
     );
   };
   
-  // Toggle function for showing all activities
   const toggleAllActivities = () => {
     setShowAllActivities(!showAllActivities);
   };
   
-  // Format task due date
   const formatDueDate = (dateString) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
@@ -216,7 +223,6 @@ const Dashboard = () => {
     }).format(date);
   };
   
-  // Get task priority color class
   const getTaskPriorityClass = (priority) => {
     switch (priority) {
       case 'high':
@@ -230,7 +236,6 @@ const Dashboard = () => {
     }
   };
   
-  // Handle creating a new task
   const handleCreateTask = async (e) => {
     e.preventDefault();
     
@@ -250,7 +255,7 @@ const Dashboard = () => {
       setIsSubmittingTask(true);
       
       // Insert the new task into the tarefas table
-      const { data: task, error } = await supabase
+      const { data, error } = await supabase
         .from('tarefas')
         .insert({
           user_id: user.id,
@@ -272,7 +277,14 @@ const Dashboard = () => {
       }
       
       // Successfully created task
-      setUserTasks([...userTasks, task as Tarefa]);
+      // Ensure the task has the correct types before adding to state
+      const newTaskWithCorrectTypes: Tarefa = {
+        ...data,
+        priority: data.priority as 'low' | 'normal' | 'high',
+        status: data.status as 'pending' | 'completed'
+      };
+      
+      setUserTasks([...userTasks, newTaskWithCorrectTypes]);
       toast.success('Tarefa criada com sucesso!');
       
       // Register the activity
@@ -281,7 +293,7 @@ const Dashboard = () => {
         tipo: 'criacao',
         descricao: `Nova tarefa criada: ${newTask.title}`,
         entidade_tipo: 'tarefa',
-        entidade_id: task.id
+        entidade_id: data.id
       });
       
       // Reset form and close dialog
@@ -302,7 +314,6 @@ const Dashboard = () => {
     }
   };
   
-  // Handle task status toggle
   const handleTaskStatusToggle = async (taskId, currentStatus) => {
     if (!user) return;
     
@@ -321,7 +332,7 @@ const Dashboard = () => {
       
       // Update local state
       setUserTasks(userTasks.map(task => 
-        task.id === taskId ? { ...task, status: newStatus } : task
+        task.id === taskId ? { ...task, status: newStatus as 'pending' | 'completed' } : task
       ));
       
       // If marked as completed, remove from the pending list
@@ -382,7 +393,7 @@ const Dashboard = () => {
                 </div>
                 <div className="mt-4 pt-4 border-t border-mono-100">
                   <Link to="/talhoes" className="text-primary hover:underline text-sm flex items-center">
-                    <span>Ver todos</span>
+                    <span>Ver todas</span>
                     <i className="fa-solid fa-arrow-right ml-1 text-xs"></i>
                   </Link>
                 </div>
@@ -400,7 +411,7 @@ const Dashboard = () => {
                 </div>
                 <div className="mt-4 pt-4 border-t border-mono-100">
                   <Link to="/maquinarios" className="text-primary hover:underline text-sm flex items-center">
-                    <span>Ver todos</span>
+                    <span>Ver todas</span>
                     <i className="fa-solid fa-arrow-right ml-1 text-xs"></i>
                   </Link>
                 </div>
@@ -418,7 +429,7 @@ const Dashboard = () => {
                 </div>
                 <div className="mt-4 pt-4 border-t border-mono-100">
                   <Link to="/trabalhadores" className="text-primary hover:underline text-sm flex items-center">
-                    <span>Ver todos</span>
+                    <span>Ver todas</span>
                     <i className="fa-solid fa-arrow-right ml-1 text-xs"></i>
                   </Link>
                 </div>
@@ -609,7 +620,6 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {/* Task Creation Dialog */}
             <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
