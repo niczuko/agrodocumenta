@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PageTitle } from '@/components/ui/PageTitle';
@@ -127,7 +128,7 @@ const Dashboard = () => {
           const {
             data: tasks,
             error: tasksError
-          } = await supabase.rpc<Tarefa[]>('get_user_tasks', {
+          } = await supabase.rpc<Tarefa, GetUserTasksParams>('get_user_tasks', {
             user_id_param: user.id
           } as GetUserTasksParams);
           
@@ -156,7 +157,7 @@ const Dashboard = () => {
             }
           } else if (tasks) {
             // Process and validate each task's properties to match Tarefa type
-            const typedTasks: Tarefa[] = tasks.map(task => ({
+            const typedTasks: Tarefa[] = (tasks || []).map(task => ({
               ...task,
               priority: validatePriority(task.priority),
               status: validateStatus(task.status)
@@ -674,3 +675,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
