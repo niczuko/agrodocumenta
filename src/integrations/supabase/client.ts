@@ -29,5 +29,16 @@ export type GetUserTasksParams = {
   user_id_param: string;
 };
 
-// Fix the typing of supabase to allow proper RPC calls
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Add the custom functions to the Database type to properly type RPC calls
+type CustomSupabaseClient = ReturnType<typeof createClient<Database>> & {
+  rpc<T = any>(fn: 'get_user_tasks', params: GetUserTasksParams): {
+    select: (...args: any[]) => { returns: <RT>() => { data: RT | null; error: any } };
+    returns: <RT>() => Promise<{ data: RT | null; error: any }>;
+  };
+};
+
+// Export the typed supabase client
+export const supabase = createClient<Database>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY
+) as CustomSupabaseClient;

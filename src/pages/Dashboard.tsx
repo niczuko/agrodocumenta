@@ -151,17 +151,14 @@ const Dashboard = () => {
               }));
               setUserTasks(typedTasks);
             }
-          } else if (data) {
+          } else {
             // Process and validate each task's properties to match Tarefa type
-            const typedTasks: Tarefa[] = data.map(task => ({
+            const typedTasks: Tarefa[] = data ? data.map(task => ({
               ...task,
               priority: validatePriority(task.priority),
               status: validateStatus(task.status)
-            }));
+            })) : [];
             setUserTasks(typedTasks);
-          } else {
-            // If tasks is null/undefined, set an empty array
-            setUserTasks([]);
           }
         } catch (taskError) {
           console.error('Task fetching error:', taskError);
