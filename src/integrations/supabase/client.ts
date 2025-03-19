@@ -9,14 +9,17 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+export type TarefaPriority = 'low' | 'normal' | 'high';
+export type TarefaStatus = 'pending' | 'completed';
+
 export type Tarefa = {
   id: string;
   user_id: string;
   title: string;
   description: string | null;
   due_date: string;
-  priority: 'low' | 'normal' | 'high';
-  status: 'pending' | 'completed';
+  priority: TarefaPriority;
+  status: TarefaStatus;
   created_at: string;
   updated_at: string | null;
 };

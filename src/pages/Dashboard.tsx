@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tarefa } from '@/integrations/supabase/client';
+import type { Tarefa, TarefaPriority, TarefaStatus } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 const Dashboard = () => {
   const {
     user
@@ -30,15 +31,22 @@ const Dashboard = () => {
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [allActivities, setAllActivities] = useState([]);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<{
+    title: string;
+    description: string;
+    due_date: string;
+    priority: TarefaPriority;
+    status: TarefaStatus;
+  }>({
     title: '',
     description: '',
     due_date: '',
-    priority: 'normal' as 'low' | 'normal' | 'high',
-    status: 'pending' as 'pending' | 'completed'
+    priority: 'normal',
+    status: 'pending'
   });
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [userTasks, setUserTasks] = useState<Tarefa[]>([]);
+  
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!user) return;
@@ -113,6 +121,7 @@ const Dashboard = () => {
           ascending: false
         });
         if (allAtividadesError) throw allAtividadesError;
+        
         try {
           // Try to fetch user tasks - if table doesn't exist yet, we'll handle error
           const {
@@ -121,6 +130,7 @@ const Dashboard = () => {
           } = await supabase.rpc('get_user_tasks', {
             user_id_param: user.id
           });
+          
           if (tasksError) {
             console.error('Error fetching tasks via RPC:', tasksError);
             // Fallback to direct query
@@ -130,24 +140,25 @@ const Dashboard = () => {
             } = await supabase.from('tarefas').select('*').eq('user_id', user.id).eq('status', 'pending').order('due_date', {
               ascending: true
             });
+            
             if (fallbackError) {
               console.error('Error in fallback tasks fetch:', fallbackError);
               // If the query also fails, we'll just set empty tasks
             } else if (fallbackTasks) {
-              // Ensure each task has the correct priority type
-              const typedTasks = fallbackTasks.map(task => ({
+              // Process and validate each task's properties to match Tarefa type
+              const typedTasks: Tarefa[] = fallbackTasks.map(task => ({
                 ...task,
-                priority: task.priority as 'low' | 'normal' | 'high',
-                status: task.status as 'pending' | 'completed'
+                priority: validatePriority(task.priority),
+                status: validateStatus(task.status)
               }));
               setUserTasks(typedTasks);
             }
           } else if (tasks) {
-            // Ensure each task has the correct priority type
-            const typedTasks = tasks.map(task => ({
+            // Process and validate each task's properties to match Tarefa type
+            const typedTasks: Tarefa[] = tasks.map(task => ({
               ...task,
-              priority: task.priority as 'low' | 'normal' | 'high',
-              status: task.status as 'pending' | 'completed'
+              priority: validatePriority(task.priority),
+              status: validateStatus(task.status)
             }));
             setUserTasks(typedTasks);
           }
@@ -155,6 +166,7 @@ const Dashboard = () => {
           console.error('Task fetching error:', taskError);
           // Table might not exist yet, so we'll just continue
         }
+        
         setAllActivities(allAtividades || []);
         setDashboardData({
           fazendas: fazendasData.length,
@@ -170,8 +182,27 @@ const Dashboard = () => {
         setIsLoading(false);
       }
     };
+    
     fetchDashboardData();
   }, [user]);
+  
+  // Helper functions to validate task properties
+  const validatePriority = (priority: string): TarefaPriority => {
+    if (priority === 'low' || priority === 'normal' || priority === 'high') {
+      return priority;
+    }
+    // Default fallback
+    return 'normal';
+  };
+  
+  const validateStatus = (status: string): TarefaStatus => {
+    if (status === 'pending' || status === 'completed') {
+      return status;
+    }
+    // Default fallback
+    return 'pending';
+  };
+  
   const formatActivity = (activity: any) => {
     const date = new Date(activity.created_at);
     const formattedDate = new Intl.DateTimeFormat('pt-BR', {
@@ -203,9 +234,11 @@ const Dashboard = () => {
         </div>
       </div>;
   };
+  
   const toggleAllActivities = () => {
     setShowAllActivities(!showAllActivities);
   };
+  
   const formatDueDate = dateString => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
@@ -214,6 +247,7 @@ const Dashboard = () => {
       year: 'numeric'
     }).format(date);
   };
+  
   const getTaskPriorityClass = priority => {
     switch (priority) {
       case 'high':
@@ -226,6 +260,7 @@ const Dashboard = () => {
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
+  
   const handleCreateTask = async e => {
     e.preventDefault();
     if (!user) return;
@@ -254,6 +289,7 @@ const Dashboard = () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }).select().single();
+      
       if (error) {
         console.error('Error creating task:', error);
         toast.error(`Erro ao criar tarefa: ${error.message}`);
@@ -264,9 +300,10 @@ const Dashboard = () => {
       // Ensure the task has the correct types before adding to state
       const newTaskWithCorrectTypes: Tarefa = {
         ...data,
-        priority: data.priority as 'low' | 'normal' | 'high',
-        status: data.status as 'pending' | 'completed'
+        priority: validatePriority(data.priority),
+        status: validateStatus(data.status)
       };
+      
       setUserTasks([...userTasks, newTaskWithCorrectTypes]);
       toast.success('Tarefa criada com sucesso!');
 
@@ -295,6 +332,7 @@ const Dashboard = () => {
       setIsSubmittingTask(false);
     }
   };
+  
   const handleTaskStatusToggle = async (taskId, currentStatus) => {
     if (!user) return;
     try {
@@ -310,7 +348,7 @@ const Dashboard = () => {
       // Update local state
       setUserTasks(userTasks.map(task => task.id === taskId ? {
         ...task,
-        status: newStatus as 'pending' | 'completed'
+        status: newStatus as TarefaStatus
       } : task));
 
       // If marked as completed, remove from the pending list
@@ -323,6 +361,7 @@ const Dashboard = () => {
       toast.error(`Erro ao atualizar status da tarefa: ${error.message}`);
     }
   };
+  
   return <Layout>
       <div className="page-transition">
         <PageTitle title="Dashboard" subtitle="Visão geral da sua fazenda" icon="fa-solid fa-gauge" />
@@ -434,7 +473,7 @@ const Dashboard = () => {
                             </div>}
                       </CardContent>
                       <CardFooter className="py-[1.5rem]">
-                        <Button variant="activity" className="w-full" onClick={toggleAllActivities}>
+                        <Button variant="activity" className="w-full text-mono-800 hover:text-mono-800" onClick={toggleAllActivities}>
                           {showAllActivities ? 'Mostrar apenas recentes' : 'Ver todas as atividades'}
                         </Button>
                       </CardFooter>
@@ -593,7 +632,7 @@ const Dashboard = () => {
                       
                       <div className="space-y-2">
                         <Label htmlFor="priority">Prioridade</Label>
-                        <Select value={newTask.priority} onValueChange={value => setNewTask({
+                        <Select value={newTask.priority} onValueChange={(value: TarefaPriority) => setNewTask({
                       ...newTask,
                       priority: value
                     })}>
@@ -628,4 +667,6 @@ const Dashboard = () => {
       </div>
     </Layout>;
 };
+
 export default Dashboard;
+
