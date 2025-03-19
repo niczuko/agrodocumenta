@@ -15,10 +15,12 @@ import GeoJSON from 'ol/format/GeoJSON';
 import Feature from 'ol/Feature';
 import { Geometry, Polygon } from 'ol/geom';
 import 'ol/ol.css';
+import { getArea } from 'ol/sphere';
 
 interface MapDrawerProps {
   value?: string;
   onChange?: (value: string) => void;
+  onAreaChange?: (areaHectares: number) => void;
   readOnly?: boolean;
   initialCenter?: [number, number];
   height?: string;
@@ -28,6 +30,7 @@ interface MapDrawerProps {
 const MapDrawer: React.FC<MapDrawerProps> = ({
   value,
   onChange,
+  onAreaChange,
   readOnly = false,
   initialCenter = [-51.9, -14.2], // Default center in Brazil
   height = '400px',
@@ -35,9 +38,21 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
-  const [drawInteraction, setDrawInteraction] = useState<Draw | null>(null);
   const vectorSourceRef = useRef<VectorSource<Geometry>>(new VectorSource());
-  const geoJSONFormat = new GeoJSON();
+  const geoJSONFormat = useRef(new GeoJSON());
+  const [drawInteraction, setDrawInteraction] = useState<Draw | null>(null);
+  const [area, setArea] = useState<number>(0);
+
+  // Calculate area of polygon in hectares
+  const calculateArea = (polygon: Polygon) => {
+    const areaInSquareMeters = getArea(polygon);
+    const areaInHectares = areaInSquareMeters / 10000; // Convert to hectares (1 hectare = 10,000 m²)
+    setArea(areaInHectares);
+    if (onAreaChange) {
+      onAreaChange(areaInHectares);
+    }
+    return areaInHectares;
+  };
 
   // Initialize map
   useEffect(() => {
@@ -84,9 +99,11 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     // If we have an existing polygon value, add it to the map
     if (value) {
       try {
-        const features = geoJSONFormat.readFeatures(value, {
+        const features = geoJSONFormat.current.readFeatures(value, {
           featureProjection: 'EPSG:3857',
         });
+        
+        vectorSource.clear(); // Clear any existing features
         vectorSource.addFeatures(features);
         
         // Zoom to the feature
@@ -96,6 +113,12 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
             padding: [50, 50, 50, 50],
             maxZoom: 18,
           });
+          
+          // Calculate and set area if a polygon exists
+          const feature = features[0];
+          if (feature.getGeometry() instanceof Polygon) {
+            calculateArea(feature.getGeometry() as Polygon);
+          }
         }
       } catch (error) {
         console.error('Error parsing GeoJSON:', error);
@@ -104,6 +127,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
 
     // Setup drawing interaction if not readOnly
     if (!readOnly) {
+      // Add modify interaction
       const modify = new Modify({ source: vectorSource });
       map.addInteraction(modify);
 
@@ -129,11 +153,20 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
           vectorSource.addFeature(event.feature);
         }
         
+        // Calculate area
+        if (event.feature.getGeometry() instanceof Polygon) {
+          calculateArea(event.feature.getGeometry() as Polygon);
+        }
+        
         updateValue();
       });
 
       // Listen for modifications
-      modify.on('modifyend', () => {
+      modify.on('modifyend', (e) => {
+        const features = vectorSource.getFeatures();
+        if (features.length > 0 && features[0].getGeometry() instanceof Polygon) {
+          calculateArea(features[0].getGeometry() as Polygon);
+        }
         updateValue();
       });
     }
@@ -142,7 +175,42 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     return () => {
       map.dispose();
     };
-  }, [readOnly]);
+  }, [readOnly, initialCenter]);
+
+  // Update when value changes externally
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    
+    if (value && vectorSourceRef.current) {
+      try {
+        const features = geoJSONFormat.current.readFeatures(value, {
+          featureProjection: 'EPSG:3857',
+        });
+        
+        vectorSourceRef.current.clear();
+        vectorSourceRef.current.addFeatures(features);
+        
+        // Calculate area
+        if (features.length > 0 && features[0].getGeometry() instanceof Polygon) {
+          calculateArea(features[0].getGeometry() as Polygon);
+        }
+        
+        // Zoom to feature
+        if (features.length > 0) {
+          const extent = vectorSourceRef.current.getExtent();
+          mapInstanceRef.current.getView().fit(extent, {
+            padding: [50, 50, 50, 50],
+            maxZoom: 18,
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing GeoJSON:', error);
+      }
+    } else if (!value) {
+      vectorSourceRef.current.clear();
+      setArea(0);
+    }
+  }, [value]);
 
   // Update the GeoJSON value
   const updateValue = () => {
@@ -155,7 +223,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     }
 
     // Convert features to GeoJSON
-    const geoJSON = geoJSONFormat.writeFeatures(features, {
+    const geoJSON = geoJSONFormat.current.writeFeatures(features, {
       featureProjection: 'EPSG:3857',
     });
     
@@ -166,8 +234,12 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
   const clearDrawing = () => {
     if (vectorSourceRef.current) {
       vectorSourceRef.current.clear();
+      setArea(0);
       if (onChange) {
         onChange('');
+      }
+      if (onAreaChange) {
+        onAreaChange(0);
       }
     }
   };
@@ -179,6 +251,12 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
         className="w-full rounded-md border border-mono-200" 
         style={{ height }}
       />
+      
+      <div className="absolute bottom-2 left-2 z-10 p-2 bg-white/90 rounded-md shadow-sm border border-mono-200">
+        <div className="text-sm text-mono-700">
+          <span className="font-medium">Área:</span> {area.toFixed(2)} hectares
+        </div>
+      </div>
       
       {!readOnly && (
         <div className="absolute top-2 right-2 z-10 flex gap-2">

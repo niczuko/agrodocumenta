@@ -9,21 +9,25 @@ import OSM from 'ol/source/OSM';
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style';
 import { fromLonLat } from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
-import { Geometry } from 'ol/geom';
+import { Geometry, Polygon } from 'ol/geom';
+import { getArea } from 'ol/sphere';
 import 'ol/ol.css';
 
 interface MapViewerProps {
   geoJSON?: string;
   height?: string;
   className?: string;
+  showArea?: boolean;
 }
 
 const MapViewer: React.FC<MapViewerProps> = ({
   geoJSON,
   height = '300px',
   className = '',
+  showArea = true,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
+  const areaRef = useRef<number>(0);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -74,6 +78,14 @@ const MapViewer: React.FC<MapViewerProps> = ({
         
         vectorSource.addFeatures(features);
         
+        // Calculate area if the first feature is a polygon
+        if (features.length > 0 && features[0].getGeometry() instanceof Polygon) {
+          const polygon = features[0].getGeometry() as Polygon;
+          const areaInSquareMeters = getArea(polygon);
+          const areaInHectares = areaInSquareMeters / 10000; // Convert to hectares
+          areaRef.current = areaInHectares;
+        }
+        
         // Zoom to the feature
         if (features.length > 0) {
           const extent = vectorSource.getExtent();
@@ -97,9 +109,17 @@ const MapViewer: React.FC<MapViewerProps> = ({
     <div className={className}>
       <div 
         ref={mapRef} 
-        className="w-full rounded-md border border-mono-200" 
+        className="w-full rounded-md border border-mono-200 relative" 
         style={{ height }}
-      />
+      >
+        {showArea && areaRef.current > 0 && (
+          <div className="absolute bottom-2 left-2 z-10 p-2 bg-white/90 rounded-md shadow-sm border border-mono-200">
+            <div className="text-sm text-mono-700">
+              <span className="font-medium">Área:</span> {areaRef.current.toFixed(2)} hectares
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

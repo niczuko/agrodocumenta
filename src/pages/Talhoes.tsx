@@ -318,6 +318,14 @@ const TalhaoFormModal = ({
   const handleMapChange = (geoJSON: string) => {
     setFormData(prev => ({ ...prev, coordenadas: geoJSON }));
   };
+
+  // Handle area calculation from the map
+  const handleAreaChange = (areaHectares: number) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      area_hectare: areaHectares > 0 ? areaHectares.toFixed(2) : '' 
+    }));
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -465,6 +473,9 @@ const TalhaoFormModal = ({
                   onChange={handleChange}
                   placeholder="Ex: 10.5"
                 />
+                <p className="text-sm text-mono-500 mt-1">
+                  A área é calculada automaticamente ao desenhar no mapa.
+                </p>
               </div>
               
               <div>
@@ -553,6 +564,7 @@ const TalhaoFormModal = ({
                 <MapDrawer 
                   value={formData.coordenadas}
                   onChange={handleMapChange}
+                  onAreaChange={handleAreaChange}
                   height="500px"
                 />
               </div>
