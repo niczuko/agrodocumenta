@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
@@ -5,6 +6,8 @@ import { PageTitle } from '@/components/ui/PageTitle';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import MapDrawer from '@/components/map/MapDrawer';
+import MapViewer from '@/components/map/MapViewer';
 import {
   Card,
   CardContent,
@@ -29,7 +32,7 @@ type Talhao = {
   previsao_colheita: string | null;
   tipo_solo: string | null;
   sistema_irrigacao: string | null;
-  coordenadas: string | null;
+  coordenadas: string | null;  // This field will store GeoJSON now
   created_at: string;
 };
 
@@ -98,6 +101,16 @@ const TalhaoCard = ({
         <div className="text-sm text-mono-500">Fazenda</div>
         <div className="font-medium">{fazendaNome}</div>
       </div>
+      
+      {talhao.coordenadas && (
+        <div className="mb-4">
+          <MapViewer 
+            geoJSON={talhao.coordenadas} 
+            height="150px" 
+            className="mt-3"
+          />
+        </div>
+      )}
       
       <div className="flex justify-between items-center mt-2 pt-4 border-t border-mono-200">
         <div>
@@ -218,16 +231,13 @@ const TalhaoDetailView = ({
             
             <Card>
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Localização</h3>
+                <h3 className="text-lg font-semibold mb-4">Área e Localização</h3>
                 {talhao.coordenadas ? (
-                  <div className="text-mono-700">
-                    <i className="fa-solid fa-location-dot mr-2"></i>
-                    {talhao.coordenadas}
-                  </div>
+                  <MapViewer geoJSON={talhao.coordenadas} height="400px" />
                 ) : (
-                  <div className="text-mono-500">
-                    <i className="fa-solid fa-map-marker-alt mr-2"></i>
-                    Coordenadas não informadas
+                  <div className="text-mono-500 text-center py-8">
+                    <i className="fa-solid fa-map-location-dot text-3xl mb-2"></i>
+                    <p>Nenhuma área desenhada para este talhão</p>
                   </div>
                 )}
               </CardContent>
@@ -303,6 +313,10 @@ const TalhaoFormModal = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMapChange = (geoJSON: string) => {
+    setFormData(prev => ({ ...prev, coordenadas: geoJSON }));
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -381,7 +395,7 @@ const TalhaoFormModal = ({
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-mono-900/50 backdrop-blur-sm">
-      <div className="animate-scale-in w-full max-w-2xl">
+      <div className="animate-scale-in w-full max-w-4xl overflow-y-auto max-h-[90vh]">
         <Glass intensity="high" className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">
@@ -532,18 +546,19 @@ const TalhaoFormModal = ({
             </div>
             
             <div className="mb-6">
-              <label htmlFor="coordenadas" className="block text-sm font-medium text-mono-700 mb-1">
-                Coordenadas
+              <label className="block text-sm font-medium text-mono-700 mb-1">
+                Área do Talhão (Desenhe no mapa)
               </label>
-              <textarea
-                id="coordenadas"
-                name="coordenadas"
-                rows={3}
-                className="input-field"
-                value={formData.coordenadas}
-                onChange={handleChange}
-                placeholder="Ex: Latitude: -23.5505, Longitude: -46.6333"
-              ></textarea>
+              <div className="mt-2">
+                <MapDrawer 
+                  value={formData.coordenadas}
+                  onChange={handleMapChange}
+                  height="500px"
+                />
+              </div>
+              <p className="text-sm text-mono-500 mt-2">
+                Desenhe o polígono do talhão clicando no mapa para adicionar pontos. Para finalizar, clique no ponto inicial.
+              </p>
             </div>
             
             <div className="flex justify-end gap-3">
