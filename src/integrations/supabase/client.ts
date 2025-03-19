@@ -24,4 +24,9 @@ export type Tarefa = {
   updated_at: string | null;
 };
 
+// Create a type for the get_user_tasks RPC function
+export type GetUserTasksParams = {
+  user_id_param: string;
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tarefa, TarefaPriority, TarefaStatus } from '@/integrations/supabase/client';
+import type { Tarefa, TarefaPriority, TarefaStatus, GetUserTasksParams } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -127,9 +127,9 @@ const Dashboard = () => {
           const {
             data: tasks,
             error: tasksError
-          } = await supabase.rpc('get_user_tasks', {
+          } = await supabase.rpc<Tarefa[]>('get_user_tasks', {
             user_id_param: user.id
-          });
+          } as GetUserTasksParams);
           
           if (tasksError) {
             console.error('Error fetching tasks via RPC:', tasksError);
@@ -144,6 +144,7 @@ const Dashboard = () => {
             if (fallbackError) {
               console.error('Error in fallback tasks fetch:', fallbackError);
               // If the query also fails, we'll just set empty tasks
+              setUserTasks([]);
             } else if (fallbackTasks) {
               // Process and validate each task's properties to match Tarefa type
               const typedTasks: Tarefa[] = fallbackTasks.map(task => ({
@@ -161,10 +162,14 @@ const Dashboard = () => {
               status: validateStatus(task.status)
             }));
             setUserTasks(typedTasks);
+          } else {
+            // If tasks is null/undefined, set an empty array
+            setUserTasks([]);
           }
         } catch (taskError) {
           console.error('Task fetching error:', taskError);
           // Table might not exist yet, so we'll just continue
+          setUserTasks([]);
         }
         
         setAllActivities(allAtividades || []);
@@ -261,7 +266,7 @@ const Dashboard = () => {
     }
   };
   
-  const handleCreateTask = async e => {
+  const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     if (!newTask.title.trim()) {
@@ -669,4 +674,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
