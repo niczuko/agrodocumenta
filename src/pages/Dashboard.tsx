@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { PageTitle } from '@/components/ui/PageTitle';
@@ -125,12 +124,9 @@ const Dashboard = () => {
         
         try {
           // Try to fetch user tasks - if table doesn't exist yet, we'll handle error
-          const {
-            data: tasks,
-            error: tasksError
-          } = await supabase.rpc<Tarefa, GetUserTasksParams>('get_user_tasks', {
-            user_id_param: user.id
-          } as GetUserTasksParams);
+          const { data, error: tasksError } = await supabase
+            .rpc('get_user_tasks', { user_id_param: user.id })
+            .returns<Tarefa[]>();
           
           if (tasksError) {
             console.error('Error fetching tasks via RPC:', tasksError);
@@ -155,9 +151,9 @@ const Dashboard = () => {
               }));
               setUserTasks(typedTasks);
             }
-          } else if (tasks) {
+          } else if (data) {
             // Process and validate each task's properties to match Tarefa type
-            const typedTasks: Tarefa[] = (tasks || []).map(task => ({
+            const typedTasks: Tarefa[] = data.map(task => ({
               ...task,
               priority: validatePriority(task.priority),
               status: validateStatus(task.status)
@@ -192,7 +188,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user]);
   
-  // Helper functions to validate task properties
   const validatePriority = (priority: string): TarefaPriority => {
     if (priority === 'low' || priority === 'normal' || priority === 'high') {
       return priority;
@@ -675,4 +670,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

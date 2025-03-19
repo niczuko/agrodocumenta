@@ -29,4 +29,5 @@ export type GetUserTasksParams = {
   user_id_param: string;
 };
 
+// Fix the typing of supabase to allow proper RPC calls
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
