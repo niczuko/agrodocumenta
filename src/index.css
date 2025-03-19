@@ -103,6 +103,23 @@
     @apply animate-fade-in;
   }
 
+  /* Status badges for entities */
+  .status-badge {
+    @apply inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full;
+  }
+  
+  .status-active {
+    @apply bg-primary/20 text-primary border border-primary/30;
+  }
+  
+  .status-maintenance, .status-license {
+    @apply bg-mono-200 text-mono-700 border border-mono-300;
+  }
+  
+  .status-inactive {
+    @apply bg-mono-100 text-mono-500 border border-mono-200;
+  }
+
   /* Padronização de botões de atividade */
   .btn-activity {
     @apply bg-mono-100 text-mono-800 hover:bg-primary/10 hover:text-mono-800 border border-mono-200
