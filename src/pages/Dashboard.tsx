@@ -15,9 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 const Dashboard = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     fazendas: 0,
@@ -38,25 +39,21 @@ const Dashboard = () => {
   });
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [userTasks, setUserTasks] = useState<Tarefa[]>([]);
-  
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!user) return;
-      
       try {
         setIsLoading(true);
-        
+
         // Fetch summary counts
-        const { data: fazendasData, error: fazendasError } = await supabase
-          .from('fazendas')
-          .select('id')
-          .eq('user_id', user.id);
-          
+        const {
+          data: fazendasData,
+          error: fazendasError
+        } = await supabase.from('fazendas').select('id').eq('user_id', user.id);
         if (fazendasError) throw fazendasError;
-        
+
         // Extract all farm IDs
         const fazendaIds = fazendasData.map(fazenda => fazenda.id);
-        
         if (fazendaIds.length === 0) {
           setDashboardData({
             fazendas: 0,
@@ -68,65 +65,71 @@ const Dashboard = () => {
           setIsLoading(false);
           return;
         }
-        
+
         // Fetch talhoes count
-        const { count: talhoesCount, error: talhoesError } = await supabase
-          .from('talhoes')
-          .select('id', { count: 'exact', head: true })
-          .in('fazenda_id', fazendaIds);
-          
+        const {
+          count: talhoesCount,
+          error: talhoesError
+        } = await supabase.from('talhoes').select('id', {
+          count: 'exact',
+          head: true
+        }).in('fazenda_id', fazendaIds);
         if (talhoesError) throw talhoesError;
-        
+
         // Fetch maquinarios count
-        const { count: maquinariosCount, error: maquinariosError } = await supabase
-          .from('maquinarios')
-          .select('id', { count: 'exact', head: true })
-          .in('fazenda_id', fazendaIds);
-          
+        const {
+          count: maquinariosCount,
+          error: maquinariosError
+        } = await supabase.from('maquinarios').select('id', {
+          count: 'exact',
+          head: true
+        }).in('fazenda_id', fazendaIds);
         if (maquinariosError) throw maquinariosError;
-        
+
         // Fetch trabalhadores count
-        const { count: trabalhadoresCount, error: trabalhadoresError } = await supabase
-          .from('trabalhadores')
-          .select('id', { count: 'exact', head: true })
-          .in('fazenda_id', fazendaIds);
-          
+        const {
+          count: trabalhadoresCount,
+          error: trabalhadoresError
+        } = await supabase.from('trabalhadores').select('id', {
+          count: 'exact',
+          head: true
+        }).in('fazenda_id', fazendaIds);
         if (trabalhadoresError) throw trabalhadoresError;
-        
+
         // Fetch recent activities
-        const { data: atividades, error: atividadesError } = await supabase
-          .from('atividades')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-          
+        const {
+          data: atividades,
+          error: atividadesError
+        } = await supabase.from('atividades').select('*').eq('user_id', user.id).order('created_at', {
+          ascending: false
+        }).limit(10);
         if (atividadesError) throw atividadesError;
-        
+
         // Fetch all activities (for when the user clicks "See all")
-        const { data: allAtividades, error: allAtividadesError } = await supabase
-          .from('atividades')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-          
+        const {
+          data: allAtividades,
+          error: allAtividadesError
+        } = await supabase.from('atividades').select('*').eq('user_id', user.id).order('created_at', {
+          ascending: false
+        });
         if (allAtividadesError) throw allAtividadesError;
-        
         try {
           // Try to fetch user tasks - if table doesn't exist yet, we'll handle error
-          const { data: tasks, error: tasksError } = await supabase
-            .rpc('get_user_tasks', { user_id_param: user.id });
-          
+          const {
+            data: tasks,
+            error: tasksError
+          } = await supabase.rpc('get_user_tasks', {
+            user_id_param: user.id
+          });
           if (tasksError) {
             console.error('Error fetching tasks via RPC:', tasksError);
             // Fallback to direct query
-            const { data: fallbackTasks, error: fallbackError } = await supabase
-              .from('tarefas')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('status', 'pending')
-              .order('due_date', { ascending: true });
-            
+            const {
+              data: fallbackTasks,
+              error: fallbackError
+            } = await supabase.from('tarefas').select('*').eq('user_id', user.id).eq('status', 'pending').order('due_date', {
+              ascending: true
+            });
             if (fallbackError) {
               console.error('Error in fallback tasks fetch:', fallbackError);
               // If the query also fails, we'll just set empty tasks
@@ -134,8 +137,8 @@ const Dashboard = () => {
               // Ensure each task has the correct priority type
               const typedTasks = fallbackTasks.map(task => ({
                 ...task,
-                priority: (task.priority as 'low' | 'normal' | 'high'),
-                status: (task.status as 'pending' | 'completed')
+                priority: task.priority as 'low' | 'normal' | 'high',
+                status: task.status as 'pending' | 'completed'
               }));
               setUserTasks(typedTasks);
             }
@@ -143,8 +146,8 @@ const Dashboard = () => {
             // Ensure each task has the correct priority type
             const typedTasks = tasks.map(task => ({
               ...task,
-              priority: (task.priority as 'low' | 'normal' | 'high'),
-              status: (task.status as 'pending' | 'completed')
+              priority: task.priority as 'low' | 'normal' | 'high',
+              status: task.status as 'pending' | 'completed'
             }));
             setUserTasks(typedTasks);
           }
@@ -152,9 +155,7 @@ const Dashboard = () => {
           console.error('Task fetching error:', taskError);
           // Table might not exist yet, so we'll just continue
         }
-        
         setAllActivities(allAtividades || []);
-        
         setDashboardData({
           fazendas: fazendasData.length,
           talhoes: talhoesCount || 0,
@@ -169,10 +170,8 @@ const Dashboard = () => {
         setIsLoading(false);
       }
     };
-    
     fetchDashboardData();
   }, [user]);
-  
   const formatActivity = (activity: any) => {
     const date = new Date(activity.created_at);
     const formattedDate = new Intl.DateTimeFormat('pt-BR', {
@@ -182,9 +181,7 @@ const Dashboard = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
-    
     let icon = 'fa-solid fa-circle-info';
-    
     switch (activity.tipo) {
       case 'criacao':
         icon = 'fa-solid fa-plus';
@@ -196,9 +193,7 @@ const Dashboard = () => {
         icon = 'fa-solid fa-trash';
         break;
     }
-    
-    return (
-      <div key={activity.id} className="flex items-start gap-3 py-3 border-b border-mono-100 last:border-0">
+    return <div key={activity.id} className="flex items-start gap-3 py-3 border-b border-mono-100 last:border-0">
         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
           <i className={`${icon} text-primary`}></i>
         </div>
@@ -206,15 +201,12 @@ const Dashboard = () => {
           <p className="text-mono-800">{activity.descricao}</p>
           <p className="text-mono-500 text-sm">{formattedDate}</p>
         </div>
-      </div>
-    );
+      </div>;
   };
-  
   const toggleAllActivities = () => {
     setShowAllActivities(!showAllActivities);
   };
-  
-  const formatDueDate = (dateString) => {
+  const formatDueDate = dateString => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
@@ -222,8 +214,7 @@ const Dashboard = () => {
       year: 'numeric'
     }).format(date);
   };
-  
-  const getTaskPriorityClass = (priority) => {
+  const getTaskPriorityClass = priority => {
     switch (priority) {
       case 'high':
         return 'bg-red-100 text-red-800 border-red-300';
@@ -235,47 +226,40 @@ const Dashboard = () => {
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
-  
-  const handleCreateTask = async (e) => {
+  const handleCreateTask = async e => {
     e.preventDefault();
-    
     if (!user) return;
-    
     if (!newTask.title.trim()) {
       toast.error('O título da tarefa é obrigatório');
       return;
     }
-    
     if (!newTask.due_date) {
       toast.error('A data de vencimento é obrigatória');
       return;
     }
-    
     try {
       setIsSubmittingTask(true);
-      
+
       // Insert the new task into the tarefas table
-      const { data, error } = await supabase
-        .from('tarefas')
-        .insert({
-          user_id: user.id,
-          title: newTask.title,
-          description: newTask.description,
-          due_date: newTask.due_date,
-          priority: newTask.priority,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('tarefas').insert({
+        user_id: user.id,
+        title: newTask.title,
+        description: newTask.description,
+        due_date: newTask.due_date,
+        priority: newTask.priority,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).select().single();
       if (error) {
         console.error('Error creating task:', error);
         toast.error(`Erro ao criar tarefa: ${error.message}`);
         return;
       }
-      
+
       // Successfully created task
       // Ensure the task has the correct types before adding to state
       const newTaskWithCorrectTypes: Tarefa = {
@@ -283,10 +267,9 @@ const Dashboard = () => {
         priority: data.priority as 'low' | 'normal' | 'high',
         status: data.status as 'pending' | 'completed'
       };
-      
       setUserTasks([...userTasks, newTaskWithCorrectTypes]);
       toast.success('Tarefa criada com sucesso!');
-      
+
       // Register the activity
       await supabase.from('atividades').insert({
         user_id: user.id,
@@ -295,7 +278,7 @@ const Dashboard = () => {
         entidade_tipo: 'tarefa',
         entidade_id: data.id
       });
-      
+
       // Reset form and close dialog
       setNewTask({
         title: '',
@@ -304,7 +287,6 @@ const Dashboard = () => {
         priority: 'normal',
         status: 'pending'
       });
-      
       setIsTaskDialogOpen(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -313,55 +295,41 @@ const Dashboard = () => {
       setIsSubmittingTask(false);
     }
   };
-  
   const handleTaskStatusToggle = async (taskId, currentStatus) => {
     if (!user) return;
-    
     try {
       const newStatus = currentStatus === 'pending' ? 'completed' : 'pending';
-      
-      const { error } = await supabase
-        .from('tarefas')
-        .update({ 
-          status: newStatus, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', taskId);
-      
+      const {
+        error
+      } = await supabase.from('tarefas').update({
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      }).eq('id', taskId);
       if (error) throw error;
-      
+
       // Update local state
-      setUserTasks(userTasks.map(task => 
-        task.id === taskId ? { ...task, status: newStatus as 'pending' | 'completed' } : task
-      ));
-      
+      setUserTasks(userTasks.map(task => task.id === taskId ? {
+        ...task,
+        status: newStatus as 'pending' | 'completed'
+      } : task));
+
       // If marked as completed, remove from the pending list
       if (newStatus === 'completed') {
         setUserTasks(userTasks.filter(task => task.id !== taskId));
       }
-      
       toast.success(`Tarefa ${newStatus === 'completed' ? 'concluída' : 'reaberta'} com sucesso!`);
     } catch (error) {
       console.error('Error updating task status:', error);
       toast.error(`Erro ao atualizar status da tarefa: ${error.message}`);
     }
   };
-  
-  return (
-    <Layout>
+  return <Layout>
       <div className="page-transition">
-        <PageTitle 
-          title="Dashboard" 
-          subtitle="Visão geral da sua fazenda"
-          icon="fa-solid fa-gauge"
-        />
+        <PageTitle title="Dashboard" subtitle="Visão geral da sua fazenda" icon="fa-solid fa-gauge" />
         
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
+        {isLoading ? <div className="flex justify-center items-center py-12">
             <i className="fa-solid fa-circle-notch fa-spin text-primary text-2xl"></i>
-          </div>
-        ) : (
-          <>
+          </div> : <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <Glass className="p-6">
                 <div className="flex items-center gap-4">
@@ -453,36 +421,20 @@ const Dashboard = () => {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="max-h-96 overflow-y-auto">
-                        {showAllActivities ? (
-                          allActivities.length > 0 ? (
-                            <div className="space-y-1">
+                        {showAllActivities ? allActivities.length > 0 ? <div className="space-y-1">
                               {allActivities.map((activity: any) => formatActivity(activity))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-6 text-mono-500">
+                            </div> : <div className="text-center py-6 text-mono-500">
                               <i className="fa-solid fa-history text-3xl mb-2"></i>
                               <p>Nenhuma atividade registrada</p>
-                            </div>
-                          )
-                        ) : (
-                          dashboardData.atividades.length > 0 ? (
-                            <div className="space-y-1">
+                            </div> : dashboardData.atividades.length > 0 ? <div className="space-y-1">
                               {dashboardData.atividades.map((activity: any) => formatActivity(activity))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-6 text-mono-500">
+                            </div> : <div className="text-center py-6 text-mono-500">
                               <i className="fa-solid fa-history text-3xl mb-2"></i>
                               <p>Nenhuma atividade recente</p>
-                            </div>
-                          )
-                        )}
+                            </div>}
                       </CardContent>
-                      <CardFooter>
-                        <Button 
-                          variant="activity" 
-                          className="w-full"
-                          onClick={toggleAllActivities}
-                        >
+                      <CardFooter className="py-[1.5rem]">
+                        <Button variant="activity" className="w-full" onClick={toggleAllActivities}>
                           {showAllActivities ? 'Mostrar apenas recentes' : 'Ver todas as atividades'}
                         </Button>
                       </CardFooter>
@@ -498,23 +450,14 @@ const Dashboard = () => {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {userTasks.length > 0 ? (
-                          <div className="space-y-3">
-                            {userTasks.map(task => (
-                              <div key={task.id} className="flex items-start gap-3 p-3 border border-mono-200 rounded-md">
-                                <div 
-                                  className="w-6 h-6 rounded-full border border-mono-300 flex items-center justify-center cursor-pointer"
-                                  onClick={() => handleTaskStatusToggle(task.id, task.status)}
-                                >
-                                  {task.status === 'completed' && (
-                                    <i className="fa-solid fa-check text-primary text-xs"></i>
-                                  )}
+                        {userTasks.length > 0 ? <div className="space-y-3">
+                            {userTasks.map(task => <div key={task.id} className="flex items-start gap-3 p-3 border border-mono-200 rounded-md">
+                                <div className="w-6 h-6 rounded-full border border-mono-300 flex items-center justify-center cursor-pointer" onClick={() => handleTaskStatusToggle(task.id, task.status)}>
+                                  {task.status === 'completed' && <i className="fa-solid fa-check text-primary text-xs"></i>}
                                 </div>
                                 <div className="flex-1">
                                   <h4 className="font-medium text-mono-800">{task.title}</h4>
-                                  {task.description && (
-                                    <p className="text-mono-600 text-sm mt-1">{task.description}</p>
-                                  )}
+                                  {task.description && <p className="text-mono-600 text-sm mt-1">{task.description}</p>}
                                   <div className="flex flex-wrap gap-2 mt-2">
                                     <span className="inline-flex items-center text-xs px-2 py-1 rounded border">
                                       <i className="fa-solid fa-calendar-days mr-1"></i>
@@ -526,23 +469,15 @@ const Dashboard = () => {
                                     </span>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-12 text-mono-500">
+                              </div>)}
+                          </div> : <div className="text-center py-12 text-mono-500">
                             <i className="fa-solid fa-clipboard-check text-4xl mb-3"></i>
                             <p className="text-lg mb-1">Nenhuma tarefa pendente</p>
                             <p className="text-sm">Você está em dia com suas atividades</p>
-                          </div>
-                        )}
+                          </div>}
                       </CardContent>
                       <CardFooter>
-                        <Button 
-                          variant="outline" 
-                          className="w-full text-primary border-primary hover:bg-primary/10"
-                          onClick={() => setIsTaskDialogOpen(true)}
-                        >
+                        <Button variant="outline" className="w-full text-primary border-primary hover:bg-primary/10" onClick={() => setIsTaskDialogOpen(true)}>
                           Criar nova tarefa
                         </Button>
                       </CardFooter>
@@ -633,44 +568,35 @@ const Dashboard = () => {
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label htmlFor="title">Título da Tarefa</Label>
-                      <Input 
-                        id="title" 
-                        value={newTask.title}
-                        onChange={(e) => setNewTask({...newTask, title: e.target.value})}
-                        placeholder="Digite o título da tarefa"
-                        required
-                      />
+                      <Input id="title" value={newTask.title} onChange={e => setNewTask({
+                    ...newTask,
+                    title: e.target.value
+                  })} placeholder="Digite o título da tarefa" required />
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="description">Descrição (opcional)</Label>
-                      <Textarea 
-                        id="description" 
-                        value={newTask.description}
-                        onChange={(e) => setNewTask({...newTask, description: e.target.value})}
-                        placeholder="Descreva detalhes sobre a tarefa"
-                        rows={3}
-                      />
+                      <Textarea id="description" value={newTask.description} onChange={e => setNewTask({
+                    ...newTask,
+                    description: e.target.value
+                  })} placeholder="Descreva detalhes sobre a tarefa" rows={3} />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="due_date">Data de Vencimento</Label>
-                        <Input 
-                          id="due_date" 
-                          type="date" 
-                          value={newTask.due_date}
-                          onChange={(e) => setNewTask({...newTask, due_date: e.target.value})}
-                          required
-                        />
+                        <Input id="due_date" type="date" value={newTask.due_date} onChange={e => setNewTask({
+                      ...newTask,
+                      due_date: e.target.value
+                    })} required />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="priority">Prioridade</Label>
-                        <Select 
-                          value={newTask.priority} 
-                          onValueChange={(value) => setNewTask({...newTask, priority: value})}
-                        >
+                        <Select value={newTask.priority} onValueChange={value => setNewTask({
+                      ...newTask,
+                      priority: value
+                    })}>
                           <SelectTrigger id="priority">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
@@ -685,33 +611,21 @@ const Dashboard = () => {
                   </div>
                   
                   <DialogFooter>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setIsTaskDialogOpen(false)}
-                    >
+                    <Button type="button" variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button 
-                      type="submit"
-                      disabled={isSubmittingTask}
-                    >
-                      {isSubmittingTask ? (
-                        <>
+                    <Button type="submit" disabled={isSubmittingTask}>
+                      {isSubmittingTask ? <>
                           <i className="fa-solid fa-circle-notch fa-spin mr-2"></i>
                           Criando...
-                        </>
-                      ) : 'Criar Tarefa'}
+                        </> : 'Criar Tarefa'}
                     </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
-          </>
-        )}
+          </>}
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Dashboard;
