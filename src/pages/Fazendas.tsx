@@ -1,3 +1,4 @@
+
 // Fix for Fazendas.tsx to properly calculate counts without using .group()
 // This replacement approach calculates counts manually after fetching all related records
 
@@ -590,8 +591,8 @@ const FazendaDetailView = ({
                         <div key={talhao.id} className="border rounded-lg p-4">
                           <div className="font-semibold mb-2">{talhao.nome || 'Talhão sem nome'}</div>
                           <div className="text-sm text-mono-500">
-                            <div>Área: {talhao.area ? `${talhao.area} ha` : 'N/A'}</div>
-                            <div>Cultura: {talhao.cultura || 'N/A'}</div>
+                            <div>Área: {talhao.area_hectare ? `${talhao.area_hectare} ha` : 'N/A'}</div>
+                            <div>Cultura: {talhao.cultivo_atual || 'N/A'}</div>
                           </div>
                         </div>
                       ))}
@@ -666,7 +667,7 @@ const FazendaDetailView = ({
                         <div key={trabalhador.id} className="border rounded-lg p-4">
                           <div className="font-semibold mb-2">{trabalhador.nome || 'Trabalhador sem nome'}</div>
                           <div className="text-sm text-mono-500">
-                            <div>Função: {trabalhador.funcao || 'N/A'}</div>
+                            <div>Função: {trabalhador.cargo || 'N/A'}</div>
                             <div>Contato: {trabalhador.contato || 'N/A'}</div>
                           </div>
                         </div>
@@ -1004,4 +1005,3 @@ const Fazendas = () => {
 };
 
 export default Fazendas;
-
