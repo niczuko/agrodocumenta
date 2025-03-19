@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tarefa } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ const Dashboard = () => {
     status: 'pending'
   });
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
-  const [userTasks, setUserTasks] = useState([]);
+  const [userTasks, setUserTasks] = useState<Tarefa[]>([]);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -113,19 +114,33 @@ const Dashboard = () => {
           
         if (allAtividadesError) throw allAtividadesError;
         
-        // Fetch user tasks
-        const { data: tasks, error: tasksError } = await supabase
-          .from('tarefas')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'pending')
-          .order('due_date', { ascending: true });
-        
-        if (tasksError) {
-          console.error('Error fetching tasks:', tasksError);
-          // If the table doesn't exist yet, we'll create it later when adding the first task
-        } else {
-          setUserTasks(tasks || []);
+        try {
+          // Try to fetch user tasks - if table doesn't exist yet, we'll handle error
+          const { data: tasks, error: tasksError } = await supabase
+            .rpc('get_user_tasks', { user_id_param: user.id });
+          
+          if (tasksError) {
+            console.error('Error fetching tasks via RPC:', tasksError);
+            // Fallback to direct query
+            const { data: fallbackTasks, error: fallbackError } = await supabase
+              .from('tarefas')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('status', 'pending')
+              .order('due_date', { ascending: true });
+            
+            if (fallbackError) {
+              console.error('Error in fallback tasks fetch:', fallbackError);
+              // If the query also fails, we'll just set empty tasks
+            } else {
+              setUserTasks(fallbackTasks || []);
+            }
+          } else {
+            setUserTasks(tasks || []);
+          }
+        } catch (taskError) {
+          console.error('Task fetching error:', taskError);
+          // Table might not exist yet, so we'll just continue
         }
         
         setAllActivities(allAtividades || []);
@@ -234,7 +249,7 @@ const Dashboard = () => {
     try {
       setIsSubmittingTask(true);
       
-      // Check if the table exists, if not, this first insertion might fail
+      // Insert the new task into the tarefas table
       const { data: task, error } = await supabase
         .from('tarefas')
         .insert({
@@ -244,44 +259,41 @@ const Dashboard = () => {
           due_date: newTask.due_date,
           priority: newTask.priority,
           status: 'pending',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
       
       if (error) {
-        if (error.code === '42P01') { // Table doesn't exist error
-          // We need to create the table first
-          toast.error('Ocorreu um erro ao criar a tarefa. Por favor, tente novamente.');
-          console.error('Table does not exist:', error);
-        } else {
-          throw error;
-        }
-      } else {
-        // Successfully created task
-        setUserTasks([...userTasks, task]);
-        toast.success('Tarefa criada com sucesso!');
-        
-        // Register the activity
-        await supabase.from('atividades').insert({
-          user_id: user.id,
-          tipo: 'criacao',
-          descricao: `Nova tarefa criada: ${newTask.title}`,
-          entidade_tipo: 'tarefa',
-          entidade_id: task.id
-        });
-        
-        // Reset form and close dialog
-        setNewTask({
-          title: '',
-          description: '',
-          due_date: '',
-          priority: 'normal',
-          status: 'pending'
-        });
-        
-        setIsTaskDialogOpen(false);
+        console.error('Error creating task:', error);
+        toast.error(`Erro ao criar tarefa: ${error.message}`);
+        return;
       }
+      
+      // Successfully created task
+      setUserTasks([...userTasks, task as Tarefa]);
+      toast.success('Tarefa criada com sucesso!');
+      
+      // Register the activity
+      await supabase.from('atividades').insert({
+        user_id: user.id,
+        tipo: 'criacao',
+        descricao: `Nova tarefa criada: ${newTask.title}`,
+        entidade_tipo: 'tarefa',
+        entidade_id: task.id
+      });
+      
+      // Reset form and close dialog
+      setNewTask({
+        title: '',
+        description: '',
+        due_date: '',
+        priority: 'normal',
+        status: 'pending'
+      });
+      
+      setIsTaskDialogOpen(false);
     } catch (error) {
       console.error('Error creating task:', error);
       toast.error(`Erro ao criar tarefa: ${error.message}`);
@@ -299,7 +311,10 @@ const Dashboard = () => {
       
       const { error } = await supabase
         .from('tarefas')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', taskId);
       
       if (error) throw error;

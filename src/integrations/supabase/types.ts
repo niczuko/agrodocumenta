@@ -275,6 +275,42 @@ export type Database = {
           },
         ]
       }
+      tarefas: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date: string
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       trabalhadores: {
         Row: {
           cargo: string
