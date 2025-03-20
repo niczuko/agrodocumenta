@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
@@ -517,7 +518,20 @@ const Fazendas = () => {
           
         if (error) throw error;
         
-        setFazendas(data || []);
+        // Map the database fields to the expected Fazenda type
+        const mappedFazendas: Fazenda[] = (data || []).map(item => ({
+          id: item.id,
+          nome: item.nome,
+          area_hectare: item.area_total || 0, // Map area_total to area_hectare
+          coordenadas: item.localizacao, // Map localizacao to coordenadas
+          cidade: null, // These fields aren't in the database
+          estado: null, 
+          pais: null,
+          user_id: item.user_id,
+          created_at: item.created_at
+        }));
+        
+        setFazendas(mappedFazendas);
       } catch (error) {
         console.error('Erro ao buscar fazendas:', error);
         toast.error('Erro ao carregar fazendas');
