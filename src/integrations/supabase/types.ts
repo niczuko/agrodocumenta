@@ -102,35 +102,44 @@ export type Database = {
       }
       fazendas: {
         Row: {
-          area_total: number | null
+          area_hectare: number | null
+          cidade: string | null
+          coordenadas: string | null
           created_at: string
           data_aquisicao: string | null
           descricao: string | null
+          estado: string | null
           id: string
-          localizacao: string | null
           nome: string
+          pais: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          area_total?: number | null
+          area_hectare?: number | null
+          cidade?: string | null
+          coordenadas?: string | null
           created_at?: string
           data_aquisicao?: string | null
           descricao?: string | null
+          estado?: string | null
           id?: string
-          localizacao?: string | null
           nome: string
+          pais?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          area_total?: number | null
+          area_hectare?: number | null
+          cidade?: string | null
+          coordenadas?: string | null
           created_at?: string
           data_aquisicao?: string | null
           descricao?: string | null
+          estado?: string | null
           id?: string
-          localizacao?: string | null
           nome?: string
+          pais?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -24,6 +24,19 @@ export type Tarefa = {
   updated_at: string | null;
 };
 
+export type Fazenda = {
+  id: string;
+  nome: string;
+  area_hectare: number | null;
+  coordenadas: string | null;
+  cidade: string | null;
+  estado: string | null;
+  pais: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // Create a type for the get_user_tasks RPC function
 export type GetUserTasksParams = {
   user_id_param: string;

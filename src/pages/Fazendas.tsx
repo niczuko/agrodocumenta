@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
@@ -261,6 +260,7 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
   const { user } = useAuth();
 
   useEffect(() => {
+    console.log("FazendaFormModal: Received fazendaData:", fazendaData);
     setFormData(fazendaData);
   }, [fazendaData]);
 
@@ -270,10 +270,12 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
   };
 
   const handleCoordinatesChange = (coordinates: string) => {
+    console.log("Form: Coordinates changed:", coordinates);
     setFormData(prev => ({ ...prev, coordenadas: coordinates }));
   };
 
   const handleAreaChange = (area: number) => {
+    console.log("Form: Area changed:", area);
     setFormData(prev => ({ 
       ...prev, 
       area_hectare: area > 0 ? area.toFixed(2) : ''
@@ -286,6 +288,7 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
 
     try {
       setIsSubmitting(true);
+      console.log("Submitting form data:", formData);
 
       const fazendaParams = {
         nome: formData.nome,
@@ -296,6 +299,8 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
         pais: formData.pais || null,
         user_id: user.id,
       };
+
+      console.log("Prepared params for Supabase:", fazendaParams);
 
       if (isEditing) {
         const { error } = await supabase
@@ -343,9 +348,18 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
         toast.success('Fazenda adicionada com sucesso!');
       }
 
+      // Recarregar dados após salvar
+      const { data } = await supabase
+        .from('fazendas')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      setFazendas(data || []);
+      
       onClose();
     } catch (error: any) {
-      console.error('Erro:', error);
+      console.error('Erro ao salvar fazenda:', error);
       toast.error(`Erro ao ${isEditing ? 'atualizar' : 'adicionar'} fazenda: ${error.message}`);
     } finally {
       setIsSubmitting(false);
@@ -518,20 +532,10 @@ const Fazendas = () => {
           
         if (error) throw error;
         
-        // Map the database fields to the expected Fazenda type
-        const mappedFazendas: Fazenda[] = (data || []).map(item => ({
-          id: item.id,
-          nome: item.nome,
-          area_hectare: item.area_total || 0, // Map area_total to area_hectare
-          coordenadas: item.localizacao, // Map localizacao to coordenadas
-          cidade: null, // These fields aren't in the database
-          estado: null, 
-          pais: null,
-          user_id: item.user_id,
-          created_at: item.created_at
-        }));
+        console.log("Fetched fazendas data:", data);
         
-        setFazendas(mappedFazendas);
+        // Use the Fazenda type directly since we've updated the database structure
+        setFazendas(data || []);
       } catch (error) {
         console.error('Erro ao buscar fazendas:', error);
         toast.error('Erro ao carregar fazendas');

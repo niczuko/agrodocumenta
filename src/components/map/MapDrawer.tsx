@@ -87,36 +87,38 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     map.addInteraction(modify);
     modifyInteractionRef.current = modify;
 
-    // Add draw interaction
-    const draw = new Draw({
-      source: vectorSourceRef.current,
-      type: 'Polygon',
-    });
-    
-    map.addInteraction(draw);
-    drawInteractionRef.current = draw;
+    // Add draw interaction if there are no features yet
+    if (vectorSourceRef.current.getFeatures().length === 0) {
+      const draw = new Draw({
+        source: vectorSourceRef.current,
+        type: 'Polygon',
+      });
+      
+      map.addInteraction(draw);
+      drawInteractionRef.current = draw;
+
+      // Listen for drawing end to update the value
+      draw.on('drawend', (event) => {
+        // Clear other features if we only want one polygon
+        const features = vectorSourceRef.current.getFeatures();
+        if (features.length > 1) {
+          vectorSourceRef.current.clear();
+          vectorSourceRef.current.addFeature(event.feature);
+        }
+        
+        // Calculate area
+        if (event.feature.getGeometry() instanceof Polygon) {
+          calculateArea(event.feature.getGeometry() as Polygon);
+        }
+        
+        updateValue();
+      });
+    }
 
     // Add snap interaction
     const snap = new Snap({ source: vectorSourceRef.current });
     map.addInteraction(snap);
     snapInteractionRef.current = snap;
-
-    // Listen for drawing end to update the value
-    draw.on('drawend', (event) => {
-      // Clear other features if we only want one polygon
-      const features = vectorSourceRef.current.getFeatures();
-      if (features.length > 1) {
-        vectorSourceRef.current.clear();
-        vectorSourceRef.current.addFeature(event.feature);
-      }
-      
-      // Calculate area
-      if (event.feature.getGeometry() instanceof Polygon) {
-        calculateArea(event.feature.getGeometry() as Polygon);
-      }
-      
-      updateValue();
-    });
 
     // Listen for modifications
     modify.on('modifyend', () => {
@@ -134,6 +136,8 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
 
     // Create vector source and layer for the drawings
     const vectorSource = vectorSourceRef.current;
+    
+    // Define style for the polygon
     const vectorLayer = new VectorLayer({
       source: vectorSource,
       style: new Style({
@@ -173,6 +177,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     // If we have an existing polygon value, add it to the map
     if (value) {
       try {
+        console.log("Trying to parse GeoJSON:", value);
         const features = geoJSONFormat.current.readFeatures(value, {
           featureProjection: 'EPSG:3857',
         });
@@ -196,6 +201,11 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
         }
       } catch (error) {
         console.error('Error parsing GeoJSON:', error);
+        
+        // In case of error, ensure the value is reset to avoid further issues
+        if (onChange) {
+          onChange('');
+        }
       }
     }
 
@@ -205,7 +215,9 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     // Cleanup function
     return () => {
       clearInteractions();
-      map.dispose();
+      if (map) {
+        map.dispose();
+      }
     };
   }, [readOnly, initialCenter]);
 
@@ -237,6 +249,11 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
         }
       } catch (error) {
         console.error('Error parsing GeoJSON:', error);
+        
+        // Reset the value if there's an error
+        if (onChange) {
+          onChange('');
+        }
       }
     } else if (!value) {
       vectorSourceRef.current.clear();
@@ -276,6 +293,9 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
       if (onAreaChange) {
         onAreaChange(0);
       }
+      
+      // Re-setup interactions to enable drawing again
+      setupInteractions();
     }
   };
 
@@ -283,7 +303,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     <div className={`relative ${className}`}>
       <div 
         ref={mapRef} 
-        className="w-full rounded-md border border-mono-200" 
+        className="w-full rounded-lg border border-mono-200" 
         style={{ height }}
       />
       

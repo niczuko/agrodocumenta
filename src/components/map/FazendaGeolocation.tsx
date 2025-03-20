@@ -29,11 +29,13 @@ const FazendaGeolocation: React.FC<FazendaGeolocationProps> = ({
   }, [value]);
 
   const handleMapChange = (geoJSON: string) => {
+    console.log("FazendaGeolocation: Map changed, setting new geoJSON:", geoJSON);
     setMapValue(geoJSON);
     onCoordinatesChange(geoJSON);
   };
 
   const handleAreaChange = (areaHectares: number) => {
+    console.log("FazendaGeolocation: Area changed:", areaHectares);
     setCalculatedArea(areaHectares);
     onAreaChange(areaHectares);
   };
