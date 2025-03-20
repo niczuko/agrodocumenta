@@ -19,9 +19,13 @@ const FazendaGeolocation: React.FC<FazendaGeolocationProps> = ({
   readOnly = false,
 }) => {
   const [mapValue, setMapValue] = useState<string>(value || '');
+  const [calculatedArea, setCalculatedArea] = useState<number>(initialArea ? parseFloat(initialArea) : 0);
 
   useEffect(() => {
-    setMapValue(value || '');
+    // Update local state when value changes from parent
+    if (value !== undefined) {
+      setMapValue(value);
+    }
   }, [value]);
 
   const handleMapChange = (geoJSON: string) => {
@@ -30,6 +34,7 @@ const FazendaGeolocation: React.FC<FazendaGeolocationProps> = ({
   };
 
   const handleAreaChange = (areaHectares: number) => {
+    setCalculatedArea(areaHectares);
     onAreaChange(areaHectares);
   };
 

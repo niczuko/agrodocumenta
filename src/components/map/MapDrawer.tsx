@@ -10,12 +10,11 @@ import Draw from 'ol/interaction/Draw';
 import Modify from 'ol/interaction/Modify';
 import Snap from 'ol/interaction/Snap';
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style';
-import { fromLonLat, toLonLat } from 'ol/proj';
+import { fromLonLat } from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
-import Feature from 'ol/Feature';
 import { Geometry, Polygon } from 'ol/geom';
-import 'ol/ol.css';
 import { getArea } from 'ol/sphere';
+import 'ol/ol.css';
 
 interface MapDrawerProps {
   value?: string;
@@ -39,8 +38,10 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource<Geometry>>(new VectorSource());
+  const drawInteractionRef = useRef<Draw | null>(null);
+  const modifyInteractionRef = useRef<Modify | null>(null);
+  const snapInteractionRef = useRef<Snap | null>(null);
   const geoJSONFormat = useRef(new GeoJSON());
-  const [drawInteraction, setDrawInteraction] = useState<Draw | null>(null);
   const [area, setArea] = useState<number>(0);
 
   // Calculate area of polygon in hectares
@@ -52,6 +53,79 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
       onAreaChange(areaInHectares);
     }
     return areaInHectares;
+  };
+
+  const clearInteractions = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (drawInteractionRef.current) {
+      map.removeInteraction(drawInteractionRef.current);
+      drawInteractionRef.current = null;
+    }
+    
+    if (modifyInteractionRef.current) {
+      map.removeInteraction(modifyInteractionRef.current);
+      modifyInteractionRef.current = null;
+    }
+    
+    if (snapInteractionRef.current) {
+      map.removeInteraction(snapInteractionRef.current);
+      snapInteractionRef.current = null;
+    }
+  };
+
+  const setupInteractions = () => {
+    const map = mapInstanceRef.current;
+    if (!map || readOnly) return;
+    
+    // Clear existing interactions first
+    clearInteractions();
+    
+    // Add modify interaction
+    const modify = new Modify({ source: vectorSourceRef.current });
+    map.addInteraction(modify);
+    modifyInteractionRef.current = modify;
+
+    // Add draw interaction
+    const draw = new Draw({
+      source: vectorSourceRef.current,
+      type: 'Polygon',
+    });
+    
+    map.addInteraction(draw);
+    drawInteractionRef.current = draw;
+
+    // Add snap interaction
+    const snap = new Snap({ source: vectorSourceRef.current });
+    map.addInteraction(snap);
+    snapInteractionRef.current = snap;
+
+    // Listen for drawing end to update the value
+    draw.on('drawend', (event) => {
+      // Clear other features if we only want one polygon
+      const features = vectorSourceRef.current.getFeatures();
+      if (features.length > 1) {
+        vectorSourceRef.current.clear();
+        vectorSourceRef.current.addFeature(event.feature);
+      }
+      
+      // Calculate area
+      if (event.feature.getGeometry() instanceof Polygon) {
+        calculateArea(event.feature.getGeometry() as Polygon);
+      }
+      
+      updateValue();
+    });
+
+    // Listen for modifications
+    modify.on('modifyend', () => {
+      const features = vectorSourceRef.current.getFeatures();
+      if (features.length > 0 && features[0].getGeometry() instanceof Polygon) {
+        calculateArea(features[0].getGeometry() as Polygon);
+      }
+      updateValue();
+    });
   };
 
   // Initialize map
@@ -125,54 +199,12 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
       }
     }
 
-    // Setup drawing interaction if not readOnly
-    if (!readOnly) {
-      // Add modify interaction
-      const modify = new Modify({ source: vectorSource });
-      map.addInteraction(modify);
-
-      // Add draw interaction
-      const draw = new Draw({
-        source: vectorSource,
-        type: 'Polygon',
-      });
-      
-      map.addInteraction(draw);
-      setDrawInteraction(draw);
-
-      // Add snap interaction
-      const snap = new Snap({ source: vectorSource });
-      map.addInteraction(snap);
-
-      // Listen for drawing end to update the value
-      draw.on('drawend', (event) => {
-        // Clear other features if we only want one polygon
-        const features = vectorSource.getFeatures();
-        if (features.length > 1) {
-          vectorSource.clear();
-          vectorSource.addFeature(event.feature);
-        }
-        
-        // Calculate area
-        if (event.feature.getGeometry() instanceof Polygon) {
-          calculateArea(event.feature.getGeometry() as Polygon);
-        }
-        
-        updateValue();
-      });
-
-      // Listen for modifications
-      modify.on('modifyend', (e) => {
-        const features = vectorSource.getFeatures();
-        if (features.length > 0 && features[0].getGeometry() instanceof Polygon) {
-          calculateArea(features[0].getGeometry() as Polygon);
-        }
-        updateValue();
-      });
-    }
+    // Setup interactions if not in readonly mode
+    setupInteractions();
 
     // Cleanup function
     return () => {
+      clearInteractions();
       map.dispose();
     };
   }, [readOnly, initialCenter]);
@@ -210,6 +242,9 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
       vectorSourceRef.current.clear();
       setArea(0);
     }
+    
+    // Ensure interactions are set up if the map value changes
+    setupInteractions();
   }, [value]);
 
   // Update the GeoJSON value

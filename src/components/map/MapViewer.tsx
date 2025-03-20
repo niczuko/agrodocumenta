@@ -27,6 +27,7 @@ const MapViewer: React.FC<MapViewerProps> = ({
   showArea = true,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<Map | null>(null);
   const areaRef = useRef<number>(0);
 
   useEffect(() => {
@@ -68,6 +69,8 @@ const MapViewer: React.FC<MapViewerProps> = ({
       }),
     });
 
+    mapInstance.current = map;
+
     // If we have GeoJSON, add it to the map
     if (geoJSON) {
       try {
@@ -101,8 +104,61 @@ const MapViewer: React.FC<MapViewerProps> = ({
 
     // Cleanup function
     return () => {
-      map.dispose();
+      if (mapInstance.current) {
+        mapInstance.current.dispose();
+        mapInstance.current = null;
+      }
     };
+  }, []);
+
+  // Update the map when geoJSON changes
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    
+    const map = mapInstance.current;
+    const vectorLayer = map.getLayers().getArray().find(
+      layer => layer instanceof VectorLayer
+    ) as VectorLayer<VectorSource<Geometry>> | undefined;
+    
+    if (!vectorLayer) return;
+    
+    const vectorSource = vectorLayer.getSource();
+    if (!vectorSource) return;
+    
+    // Clear existing features
+    vectorSource.clear();
+    areaRef.current = 0;
+    
+    // Add new features if we have GeoJSON
+    if (geoJSON) {
+      try {
+        const geoJSONFormat = new GeoJSON();
+        const features = geoJSONFormat.readFeatures(geoJSON, {
+          featureProjection: 'EPSG:3857',
+        });
+        
+        vectorSource.addFeatures(features);
+        
+        // Calculate area if the first feature is a polygon
+        if (features.length > 0 && features[0].getGeometry() instanceof Polygon) {
+          const polygon = features[0].getGeometry() as Polygon;
+          const areaInSquareMeters = getArea(polygon);
+          const areaInHectares = areaInSquareMeters / 10000; // Convert to hectares
+          areaRef.current = areaInHectares;
+        }
+        
+        // Zoom to the feature
+        if (features.length > 0) {
+          const extent = vectorSource.getExtent();
+          map.getView().fit(extent, {
+            padding: [50, 50, 50, 50],
+            maxZoom: 18,
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing GeoJSON:', error);
+      }
+    }
   }, [geoJSON]);
 
   return (
