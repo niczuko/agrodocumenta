@@ -43,6 +43,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
   const snapInteractionRef = useRef<Snap | null>(null);
   const geoJSONFormat = useRef(new GeoJSON());
   const [area, setArea] = useState<number>(0);
+  const [initialized, setInitialized] = useState(false);
 
   // Calculate area of polygon in hectares
   const calculateArea = (polygon: Polygon) => {
@@ -177,7 +178,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
     // If we have an existing polygon value, add it to the map
     if (value) {
       try {
-        console.log("Trying to parse GeoJSON:", value);
+        console.log("MapDrawer - Initializing with GeoJSON:", value);
         const features = geoJSONFormat.current.readFeatures(value, {
           featureProjection: 'EPSG:3857',
         });
@@ -200,7 +201,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
           }
         }
       } catch (error) {
-        console.error('Error parsing GeoJSON:', error);
+        console.error('Error parsing GeoJSON in init:', error);
         
         // In case of error, ensure the value is reset to avoid further issues
         if (onChange) {
@@ -211,6 +212,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
 
     // Setup interactions if not in readonly mode
     setupInteractions();
+    setInitialized(true);
 
     // Cleanup function
     return () => {
@@ -223,10 +225,11 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
 
   // Update when value changes externally
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !initialized) return;
     
     if (value && vectorSourceRef.current) {
       try {
+        console.log("MapDrawer - Value changed externally:", value);
         const features = geoJSONFormat.current.readFeatures(value, {
           featureProjection: 'EPSG:3857',
         });
@@ -248,21 +251,22 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
           });
         }
       } catch (error) {
-        console.error('Error parsing GeoJSON:', error);
+        console.error('Error parsing GeoJSON in update:', error);
         
         // Reset the value if there's an error
         if (onChange) {
           onChange('');
         }
       }
-    } else if (!value) {
+    } else if (value === '') {
+      // If value is explicitly set to empty string, clear features
       vectorSourceRef.current.clear();
       setArea(0);
     }
     
     // Ensure interactions are set up if the map value changes
     setupInteractions();
-  }, [value]);
+  }, [value, initialized]);
 
   // Update the GeoJSON value
   const updateValue = () => {
@@ -279,6 +283,7 @@ const MapDrawer: React.FC<MapDrawerProps> = ({
       featureProjection: 'EPSG:3857',
     });
     
+    console.log("MapDrawer - Updating value with GeoJSON:", geoJSON);
     onChange(geoJSON);
   };
 

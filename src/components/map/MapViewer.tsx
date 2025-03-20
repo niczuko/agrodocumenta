@@ -74,7 +74,7 @@ const MapViewer: React.FC<MapViewerProps> = ({
     // If we have GeoJSON, add it to the map
     if (geoJSON) {
       try {
-        console.log("Parsing GeoJSON in MapViewer:", geoJSON);
+        console.log("MapViewer - Initializing with GeoJSON:", geoJSON);
         const geoJSONFormat = new GeoJSON();
         const features = geoJSONFormat.readFeatures(geoJSON, {
           featureProjection: 'EPSG:3857',
@@ -99,7 +99,7 @@ const MapViewer: React.FC<MapViewerProps> = ({
           });
         }
       } catch (error) {
-        console.error('Error parsing GeoJSON:', error);
+        console.error('Error parsing GeoJSON in MapViewer init:', error);
       }
     }
 
@@ -133,7 +133,7 @@ const MapViewer: React.FC<MapViewerProps> = ({
     // Add new features if we have GeoJSON
     if (geoJSON) {
       try {
-        console.log("Updating MapViewer with GeoJSON:", geoJSON);
+        console.log("MapViewer - Updating with GeoJSON:", geoJSON);
         const geoJSONFormat = new GeoJSON();
         const features = geoJSONFormat.readFeatures(geoJSON, {
           featureProjection: 'EPSG:3857',
@@ -158,7 +158,7 @@ const MapViewer: React.FC<MapViewerProps> = ({
           });
         }
       } catch (error) {
-        console.error('Error parsing GeoJSON in update:', error);
+        console.error('Error parsing GeoJSON in MapViewer update:', error, geoJSON);
       }
     }
   }, [geoJSON]);
