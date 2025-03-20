@@ -38,7 +38,7 @@ export type Fazenda = {
 };
 
 // Add the custom functions to the Database type to properly type RPC calls
-type GetUserTasksParams = {
+export type GetUserTasksParams = {
   user_id_param: string;
 };
 
