@@ -372,7 +372,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_tasks: {
+        Args: {
+          user_id_param: string
+        }
+        Returns: {
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
