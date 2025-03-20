@@ -39,16 +39,16 @@ const MapViewer: React.FC<MapViewerProps> = ({
       source: vectorSource,
       style: new Style({
         fill: new Fill({
-          color: 'rgba(51, 153, 204, 0.2)',
+          color: 'rgba(128, 128, 128, 0.2)', // Cinza com transparência
         }),
         stroke: new Stroke({
-          color: '#3399CC',
+          color: '#666666', // Cinza médio
           width: 2,
         }),
         image: new CircleStyle({
           radius: 7,
           fill: new Fill({
-            color: '#3399CC',
+            color: '#808080', // Cinza
           }),
         }),
       }),
@@ -165,7 +165,7 @@ const MapViewer: React.FC<MapViewerProps> = ({
     <div className={className}>
       <div 
         ref={mapRef} 
-        className="w-full rounded-md border border-mono-200 relative" 
+        className="w-full rounded-md border border-mono-200 overflow-hidden" 
         style={{ height }}
       >
         {showArea && areaRef.current > 0 && (

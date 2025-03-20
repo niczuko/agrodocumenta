@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
@@ -319,7 +318,6 @@ const TalhaoFormModal = ({
     setFormData(prev => ({ ...prev, coordenadas: geoJSON }));
   };
 
-  // Handle area calculation from the map
   const handleAreaChange = (areaHectares: number) => {
     setFormData(prev => ({ 
       ...prev, 
@@ -359,7 +357,6 @@ const TalhaoFormModal = ({
           throw error;
         }
         
-        // Registrar atividade
         await supabase.from('atividades').insert({
           user_id: user.id,
           tipo: 'atualizacao',
@@ -380,7 +377,6 @@ const TalhaoFormModal = ({
           throw error;
         }
         
-        // Registrar atividade
         await supabase.from('atividades').insert({
           user_id: user.id,
           tipo: 'criacao',
