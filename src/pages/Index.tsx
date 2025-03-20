@@ -436,7 +436,7 @@ const Index = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="fa-solid fa-location-dot w-5"></i>
-                  <span>São Paulo, SP - Brasil</span>
+                  <span>Cedral, SP - Brasil</span>
                 </li>
               </ul>
             </div>
