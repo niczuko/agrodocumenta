@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Glass } from '@/components/ui/Glass';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, Fazenda as FazendaType } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import FazendaGeolocation from '@/components/map/FazendaGeolocation';
 import MapViewer from '@/components/map/MapViewer';
@@ -16,17 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 
-type Fazenda = {
-  id: string;
-  nome: string;
-  area_hectare: number;
-  coordenadas: string | null;
-  cidade: string | null;
-  estado: string | null;
-  pais: string | null;
-  user_id: string;
-  created_at: string;
-};
+type Fazenda = FazendaType;
 
 const FazendaCard = ({ 
   fazenda, 
@@ -237,6 +228,7 @@ type FazendaFormModalProps = {
   onClose: () => void;
   isEditing?: boolean;
   fazendaData?: any;
+  onFazendaUpdate: (fazendas: Fazenda[]) => void;
 };
 
 const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
@@ -254,6 +246,7 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
     user_id: '',
     created_at: '',
   },
+  onFazendaUpdate
 }) => {
   const [formData, setFormData] = useState(fazendaData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -355,7 +348,9 @@ const FazendaFormModal: React.FC<FazendaFormModalProps> = ({
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      setFazendas(data || []);
+      if (data) {
+        onFazendaUpdate(data);
+      }
       
       onClose();
     } catch (error: any) {
@@ -601,6 +596,10 @@ const Fazendas = () => {
     setIsModalOpen(false);
     setEditingFazenda(null);
   };
+
+  const handleFazendaUpdate = (updatedFazendas: Fazenda[]) => {
+    setFazendas(updatedFazendas);
+  };
   
   const filteredFazendas = fazendas.filter(fazenda => {
     return fazenda.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -684,6 +683,7 @@ const Fazendas = () => {
           isOpen={isModalOpen} 
           onClose={closeModal} 
           isEditing={!!editingFazenda}
+          onFazendaUpdate={handleFazendaUpdate}
           fazendaData={
             editingFazenda 
               ? fazendas.find(f => f.id === editingFazenda)

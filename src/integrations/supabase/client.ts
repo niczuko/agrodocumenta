@@ -34,11 +34,11 @@ export type Fazenda = {
   pais: string | null;
   user_id: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 };
 
-// Create a type for the get_user_tasks RPC function
-export type GetUserTasksParams = {
+// Add the custom functions to the Database type to properly type RPC calls
+type GetUserTasksParams = {
   user_id_param: string;
 };
 
